@@ -1,0 +1,59 @@
+{% extends "web/base.html" %}{% load ledger_extras %}
+{% block title %}System{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>System &amp; deterministic verification</h1>
+    <p class="sub">Configuration, projector health, and the verification gate that proves the whole ledger is consistent.</p></div>
+</div>
+
+<div class="grid g3">
+  <div class="card">
+    <h2>Infrastructure</h2>
+    <table><tbody>
+      <tr><td>DB mode</td><td><b>{{ db_mode }}</b></td></tr>
+      <tr><td>Event store module</td><td class="mono">{{ module }}</td></tr>
+      <tr><td>Snapshot interval</td><td>every {{ interval }} events</td></tr>
+      <tr><td>Projector poll</td><td>{{ settings.PROJECTOR_POLL_SECONDS }} s</td></tr>
+      <tr><td>Large transfer alert</td><td>&ge; {{ settings.ALERT_LARGE_TRANSFER_TND }} TND</td></tr>
+      <tr><td>Low balance alert</td><td>&lt; {{ settings.ALERT_LOW_BALANCE_TND }} TND</td></tr>
+    </tbody></table>
+  </div>
+  <div class="card">
+    <h2>Projector (read side)</h2>
+    <table><tbody>
+      <tr><td>Event log head</td><td class="mono">#{{ status.head }}</td></tr>
+      <tr><td>Checkpoint position</td><td class="mono">#{{ status.position }}</td></tr>
+      <tr><td>Lag</td><td>{{ status.lag_events }} event{{ status.lag_events|pluralize }}
+        {% if status.projector_stalled %}<span class="tag bad">projector not running?</span>{% else %}<span class="tag ok">healthy</span>{% endif %}</td></tr>
+      <tr><td>Last live lag</td><td>{% if status.last_lag_ms != None %}{{ status.last_lag_ms }} ms{% else %}&mdash;{% endif %}</td></tr>
+      <tr><td>Events processed</td><td>{{ checkpoint.events_processed|default:0 }}</td></tr>
+    </tbody></table>
+    <form method="post" class="mt">{% csrf_token %}<input type="hidden" name="action" value="rebuild">
+      <button class="btn ghost" onclick="return confirm('Delete every read-model table and rebuild it from the events?')">&#8635; Wipe &amp; rebuild read model from events</button></form>
+  </div>
+  <div class="card">
+    <h2>AI audit provider</h2>
+    <p><span class="tag {% if provider.name == 'deterministic' %}warn{% else %}ok{% endif %}">{{ provider.name }}</span> <span class="mono">{{ provider.model }}</span></p>
+    <p class="muted" style="font-size:12.5px">{{ provider.reason }}</p>
+    <table><tbody>
+      <tr><td>Ollama URL</td><td class="mono">{{ settings.OLLAMA_URL }}</td></tr>
+      <tr><td>Ollama model</td><td class="mono">{{ settings.OLLAMA_MODEL }}</td></tr>
+      <tr><td>Gemini model</td><td class="mono">{{ settings.GEMINI_MODEL }} {% if settings.GEMINI_API_KEY %}<span class="tag ok">key set</span>{% else %}<span class="tag">no key</span>{% endif %}</td></tr>
+    </tbody></table>
+  </div>
+</div>
+
+<div class="card mt">
+  <div class="flex between"><h2>Verification gate</h2>
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="verify"><button class="btn accent">&#10003; Run verification gate now</button></form></div>
+  <p class="muted" style="font-size:12.5px">Same checks as <code>python manage.py verify_ledger</code> (run by the CI pipeline): contiguous versions, monotonic timestamps,
+    snapshot == full replay, read model == event store, statement sums, non-negative balances, money conservation, projector at head.</p>
+  {% if report %}
+    <div class="banner {% if report.passed %}ok{% else %}bad{% endif %}"><span class="big">{% if report.passed %}&#10003;{% else %}&#10007;{% endif %}</span>
+      <div><b>{% if report.passed %}PASSED{% else %}FAILED{% endif %}</b> &mdash; {{ report.checks|length }} checks on {{ report.accounts }} accounts / {{ report.events }} events</div></div>
+    <div class="grid g2">{% for c in report.checks %}
+      <div class="check {% if c.passed %}pass{% else %}fail{% endif %}"><span class="icon">{% if c.passed %}&#10003;{% else %}&#10007;{% endif %}</span>
+        <div>{{ c.name }}{% if c.detail %}<br><span class="muted" style="font-size:12px">{{ c.detail }}</span>{% endif %}</div></div>{% endfor %}</div>
+  {% endif %}
+</div>
+{% endblock %}

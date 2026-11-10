@@ -1,0 +1,138 @@
+{
+  "measured_at": "2026-11-10T19:50:53+00:00",
+  "machine": {
+    "os": "Windows 11",
+    "cpu": "AMD64 Family 23 Model 160 Stepping 0, AuthenticAMD",
+    "cpu_count": 8,
+    "python": "3.12.10"
+  },
+  "db_mode": "embedded",
+  "event_store": "eventsourcing.postgres",
+  "B1_reconstruction": [
+    {
+      "stream_length": 150,
+      "delta_events_after_snapshot": 50,
+      "full_replay": {
+        "median_ms": 8.628,
+        "p95_ms": 9.461,
+        "min_ms": 8.038,
+        "runs": 15
+      },
+      "snapshot_plus_delta": {
+        "median_ms": 3.805,
+        "p95_ms": 4.236,
+        "min_ms": 3.388,
+        "runs": 15
+      },
+      "speedup": 2.3
+    },
+    {
+      "stream_length": 550,
+      "delta_events_after_snapshot": 50,
+      "full_replay": {
+        "median_ms": 31.909,
+        "p95_ms": 35.395,
+        "min_ms": 28.651,
+        "runs": 15
+      },
+      "snapshot_plus_delta": {
+        "median_ms": 3.699,
+        "p95_ms": 4.864,
+        "min_ms": 3.392,
+        "runs": 15
+      },
+      "speedup": 8.6
+    },
+    {
+      "stream_length": 1050,
+      "delta_events_after_snapshot": 50,
+      "full_replay": {
+        "median_ms": 56.494,
+        "p95_ms": 61.732,
+        "min_ms": 53.552,
+        "runs": 15
+      },
+      "snapshot_plus_delta": {
+        "median_ms": 3.9,
+        "p95_ms": 4.923,
+        "min_ms": 3.596,
+        "runs": 15
+      },
+      "speedup": 14.5
+    },
+    {
+      "stream_length": 2550,
+      "delta_events_after_snapshot": 50,
+      "full_replay": {
+        "median_ms": 134.292,
+        "p95_ms": 141.114,
+        "min_ms": 130.641,
+        "runs": 15
+      },
+      "snapshot_plus_delta": {
+        "median_ms": 3.766,
+        "p95_ms": 4.664,
+        "min_ms": 3.353,
+        "runs": 15
+      },
+      "speedup": 35.7
+    }
+  ],
+  "B2_write_throughput": [
+    {
+      "events": 148,
+      "seconds": 0.776,
+      "events_per_second": 190.6
+    },
+    {
+      "events": 548,
+      "seconds": 3.435,
+      "events_per_second": 159.5
+    },
+    {
+      "events": 1048,
+      "seconds": 6.034,
+      "events_per_second": 173.7
+    },
+    {
+      "events": 2548,
+      "seconds": 14.812,
+      "events_per_second": 172.0
+    }
+  ],
+  "B3_queries": {
+    "accounts": 6,
+    "events": 98,
+    "read_model_account_list": {
+      "median_ms": 0.523,
+      "p95_ms": 1.034,
+      "min_ms": 0.51,
+      "runs": 30
+    },
+    "event_store_replay_with_snapshots": {
+      "median_ms": 5.224,
+      "p95_ms": 6.811,
+      "min_ms": 3.696,
+      "runs": 15
+    },
+    "event_store_full_replay": {
+      "median_ms": 8.598,
+      "p95_ms": 8.959,
+      "min_ms": 7.571,
+      "runs": 15
+    },
+    "read_model_statement_50_lines": {
+      "median_ms": 1.415,
+      "p95_ms": 2.036,
+      "min_ms": 1.254,
+      "runs": 30
+    }
+  },
+  "B4_projection_lag": {
+    "poll_interval_s": 0.2,
+    "median_ms": 206.561,
+    "p95_ms": 238.697,
+    "min_ms": 57.955,
+    "runs": 40
+  }
+}

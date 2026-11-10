@@ -1,0 +1,85 @@
+{% extends "web/base.html" %}{% load ledger_extras %}
+{% block title %}Replay {{ owner }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Temporal replay audit &mdash; {{ owner }}</h1>
+    <p class="sub">Read directly from the <span class="side store">event store</span>. State is rebuilt as a
+      <b>left-fold</b>: <code>state<sub>n</sub> = apply(state<sub>n-1</sub>, event<sub>n</sub>)</code>.
+      A snapshot is stored every <b>{{ interval }}</b> events.</p>
+  </div>
+  <a class="btn ghost" href="{% url 'account' account_id %}">&larr; Back to account</a>
+</div>
+
+<div class="card">
+  <div class="flex between"><h2>&#9201; Time travel: balance at any moment <i>t</i></h2>
+    <span class="muted" style="font-size:12.5px">history from {{ first_ts|date:"d M Y H:i" }} to {{ last_ts|date:"d M Y H:i" }}</span></div>
+  <form class="inline" method="get">
+    <div class="field" style="max-width:260px"><label>Moment t (Africa/Tunis time)</label>
+      <input type="datetime-local" name="at" value="{{ at_value }}" required></div>
+    <button class="btn">Rebuild state at t</button>
+    <a class="btn ghost" href="{% url 'balance_at' account_id %}{% if at_value %}?at={{ at_value }}{% endif %}">JSON API</a>
+  </form>
+  {% if travel %}
+    {% if travel.account %}
+    <div class="grid g4 mt">
+      <div class="kpi"><div class="label">Balance at t</div><div class="value">{{ travel.account.balance|tnd }} <small>TND</small></div></div>
+      <div class="kpi"><div class="label">Available at t</div><div class="value">{{ travel.account.available|tnd }} <small>TND</small></div></div>
+      <div class="kpi"><div class="label">Version at t</div><div class="value mono">v{{ travel.version }}</div><div class="hint">of {{ travel.total_versions }} events today</div></div>
+      <div class="kpi"><div class="label">Escrow holds at t</div><div class="value">{{ travel.account.holds|length }}</div></div>
+    </div>
+    <h3 class="mt">How it was rebuilt (snapshot + delta replay)</h3>
+    <div class="bar">
+      {% if travel.snapshot_version %}<div class="seg-snap" style="flex:{{ travel.snapshot_version }}">snapshot @ v{{ travel.snapshot_version }} (loaded in 1 read)</div>{% endif %}
+      {% if travel.replayed_events %}<div class="seg-delta" style="flex:{{ travel.replayed_events }}">+{{ travel.replayed_events }} delta event{{ travel.replayed_events|pluralize }} replayed</div>{% endif %}
+      {% if future %}<div class="seg-future" style="flex:{{ future }}">{{ future }} later event{{ future|pluralize }} ignored</div>{% endif %}
+    </div>
+    <p class="muted" style="font-size:12.5px">Instead of replaying {{ travel.version }} events, the repository loaded the latest snapshot &le; v{{ travel.version }}
+      {% if travel.snapshot_version %}(v{{ travel.snapshot_version }}){% else %}(none yet){% endif %} and replayed only {{ travel.replayed_events }} event{{ travel.replayed_events|pluralize }}.</p>
+    {% else %}
+    <p class="mt"><span class="tag warn">The account did not exist yet at that moment.</span></p>
+    {% endif %}
+  {% endif %}
+</div>
+
+<div class="card mt">
+  <div class="flex between"><h2>Balance after every event</h2><span class="muted" style="font-size:12.5px">&#9632; teal points = versions with a stored snapshot</span></div>
+  <canvas id="balance" height="80"></canvas>
+</div>
+
+<div class="grid g2 mt" style="grid-template-columns: minmax(0,5fr) minmax(0,7fr)">
+  <div class="card flush">
+    <h2>Event stream ({{ steps|length }} events)</h2>
+    <ul class="timeline">{% for s in steps %}
+      <li class="{% if s.version == step %}current{% endif %}" id="step-{{ s.version }}">
+        <a href="?step={{ s.version }}" hx-get="?step={{ s.version }}&fragment=state" hx-target="#state" hx-push-url="?step={{ s.version }}"
+           onclick="document.querySelectorAll('.timeline li').forEach(l=>l.classList.remove('current'));this.parentNode.classList.add('current')">
+          <span class="ver">v{{ s.version }}</span>
+          <span><span class="tag {{ s.event_type }}">{{ s.event_type }}</span>{% if s.has_snapshot %}<span class="snap">SNAPSHOT</span>{% endif %}<br>
+            <span class="muted" style="font-size:12px">{{ s.timestamp|date:"d M Y H:i" }}</span></span>
+          <span class="mono {% if s.signed_amount > 0 %}pos{% elif s.signed_amount < 0 %}neg{% endif %}" style="font-size:12.5px">{% if s.signed_amount %}{{ s.signed_amount|tnd }}{% endif %}</span>
+        </a></li>{% endfor %}
+    </ul>
+  </div>
+  <div class="card" id="state">{% include "web/_replay_state.html" %}</div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const d = {{ chart|safe }};
+const snaps = new Set(d.snapshots.map(v => 'v' + v));
+new Chart(document.getElementById('balance'), {
+  type: 'line',
+  data: { labels: d.labels, datasets: [
+    { label: 'Ledger balance', data: d.balance, borderColor: '#13305a', backgroundColor: '#13305a', tension: .15,
+      pointRadius: d.labels.map(l => snaps.has(l) ? 6 : 2), pointBackgroundColor: d.labels.map(l => snaps.has(l) ? '#0f9d8a' : '#13305a') },
+    { label: 'Available (balance - escrow holds)', data: d.available, borderColor: '#c2410c', borderDash: [5, 4], pointRadius: 0, tension: .15 } ] },
+  options: { responsive: true, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'bottom' } },
+    scales: { y: { title: { display: true, text: 'TND' } } },
+    onClick: (e, els) => { if (els.length) { window.location = '?step=' + (els[0].index + 1); } } }
+});
+// scroll only the event list (not the whole page) to the selected step
+const li = document.getElementById('step-{{ step }}'), tl = document.querySelector('.timeline');
+if (li && tl) { tl.scrollTop = li.offsetTop - tl.offsetTop - 200; }
+</script>
+{% endblock %}

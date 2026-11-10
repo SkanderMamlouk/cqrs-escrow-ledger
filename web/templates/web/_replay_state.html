@@ -1,0 +1,25 @@
+{% load ledger_extras %}
+<div class="flex between">
+  <h2>State after <span class="mono">v{{ current.version }}</span> &mdash; {{ current.event_id }}</h2>
+  <div class="flex">
+    {% if step > 1 %}<a class="btn ghost small" hx-get="?step={{ step|add:'-1' }}&fragment=state" hx-target="#state" href="?step={{ step|add:'-1' }}">&larr; Previous</a>{% endif %}
+    {% if step < steps|length %}<a class="btn ghost small" hx-get="?step={{ step|add:'1' }}&fragment=state" hx-target="#state" href="?step={{ step|add:'1' }}">Next &rarr;</a>{% endif %}
+  </div>
+</div>
+<p><span class="tag {{ current.event_type }}">{{ current.event_type }}</span>
+  {% if current.has_snapshot %}<span class="snap">SNAPSHOT STORED HERE</span>{% endif %}
+  &nbsp;{{ current.timestamp|date:"l d F Y, H:i:s" }}</p>
+<p>{{ current.description }}</p>
+<div class="state-box">
+  <div class="kpi"><div class="label">Ledger balance</div><div class="value">{{ current.balance|tnd }}</div></div>
+  <div class="kpi"><div class="label">Held in escrow</div><div class="value">{{ current.held|tnd }}</div></div>
+  <div class="kpi"><div class="label">Available</div><div class="value">{{ current.available|tnd }}</div></div>
+</div>
+<p class="muted" style="font-size:12.5px">Effect of this event on the balance:
+  <b class="{% if current.signed_amount > 0 %}pos{% elif current.signed_amount < 0 %}neg{% endif %}">{% if current.signed_amount %}{{ current.signed_amount|tnd }} TND{% else %}none (does not move the ledger balance){% endif %}</b></p>
+{% if current.holds %}
+<h3>Escrow holds active at this version</h3>
+<table><tbody>{% for hid, h in current.holds.items %}<tr><td class="mono">{{ hid }}</td><td>{{ h.reason }}</td><td class="num">{{ h.amount|tnd }}</td></tr>{% endfor %}</tbody></table>
+{% endif %}
+<h3 class="mt">Immutable event payload</h3>
+<pre class="json">{{ current.payload|tojson }}</pre>

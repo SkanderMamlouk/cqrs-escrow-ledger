@@ -1,0 +1,43 @@
+{% load static ledger_extras %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Escrow Ledger{% endblock %} - CQRS & Event Sourcing</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="{% static 'vendor/htmx.min.js' %}"></script>
+  <script src="{% static 'vendor/chart.umd.min.js' %}"></script>
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<header class="topbar">
+  <div class="inner">
+    <a class="brand" href="{% url 'dashboard' %}"><span class="logo">&#8721;</span>
+      <span>Escrow Ledger<small>CQRS &middot; Event Sourcing &middot; Django</small></span></a>
+    {% with p=request.resolver_match.url_name %}
+    <nav class="nav">
+      <a href="{% url 'dashboard' %}" class="{% if p == 'dashboard' %}active{% endif %}">Dashboard</a>
+      <a href="{% url 'events' %}" class="{% if p == 'events' %}active{% endif %}">Event Store</a>
+      <a href="{% url 'alerts' %}" class="{% if p == 'alerts' %}active{% endif %}">Webhook Alerts</a>
+      <a href="{% url 'system' %}" class="{% if p == 'system' %}active{% endif %}">System &amp; Verification</a>
+    </nav>
+    {% endwith %}
+    <div class="status-pills">
+      <span class="pill" title="Where the event store and read DB live">DB: {{ nav_db_mode }}</span>
+      {% if nav_status %}
+      <span class="pill" title="Events not yet projected into the read model">
+        <span class="dot {% if nav_status.projector_stalled %}bad{% elif nav_status.lag_events %}warn{% endif %}"></span>
+        Projection lag: {{ nav_status.lag_events }} event{{ nav_status.lag_events|pluralize }}</span>
+      {% endif %}
+      {% if nav_provider %}<span class="pill" title="{{ nav_provider.reason }}">AI: {{ nav_provider.name }}</span>{% endif %}
+    </div>
+  </div>
+</header>
+<main class="page">
+  {% if messages %}<ul class="messages">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}
+  {% block content %}{% endblock %}
+  <p class="foot">ISG Tunis &middot; DS1 2026&ndash;2027 &middot; Project 14 &middot; BI1 Group 6 &middot;
+    Synthetic demo data (fictional customers) &middot; All amounts in TND</p>
+</main>
+{% block scripts %}{% endblock %}
+</body>
+</html>

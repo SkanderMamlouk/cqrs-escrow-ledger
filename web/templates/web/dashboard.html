@@ -1,0 +1,86 @@
+{% extends "web/base.html" %}{% load ledger_extras %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Core Banking &amp; Escrow Ledger</h1>
+    <p class="sub">Every number on this page comes from the <span class="side read">read model</span> &mdash;
+      denormalized SQL tables updated asynchronously by the projector from the immutable event log.</p>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  <h3>CQRS data flow</h3>
+  <div class="arch">
+    <div class="box w">Command handler<small>validate &amp; decide</small></div><div class="arrow">&rarr;</div>
+    <div class="box s">Event store<small>append-only &middot; {{ status.head }} events</small></div><div class="arrow">&rarr;</div>
+    <div class="box s">Projector worker<small>checkpoint #{{ status.position }}</small></div><div class="arrow">&rarr;</div>
+    <div class="box r">Read model<small>this dashboard</small></div>
+  </div>
+</div>
+
+<div class="grid g4">
+  <div class="card kpi"><div class="label">Deposits under management</div>
+    <div class="value">{{ totals.balance|tnd }} <small>TND</small></div><div class="hint">{{ totals.n }} accounts</div></div>
+  <div class="card kpi"><div class="label">Blocked in escrow</div>
+    <div class="value">{{ holds.amount|default:0|tnd }} <small>TND</small></div><div class="hint">{{ holds.n }} active hold{{ holds.n|pluralize }}</div></div>
+  <div class="card kpi"><div class="label">Immutable events</div>
+    <div class="value">{{ status.head }}</div><div class="hint">append-only, never updated</div></div>
+  <div class="card kpi"><div class="label">Projection lag</div>
+    <div class="value">{{ status.lag_events }} <small>events</small></div>
+    <div class="hint">{% if status.last_lag_ms != None %}last live event projected after {{ status.last_lag_ms|floatformat:0 }} ms{% else %}eventual consistency{% endif %}</div></div>
+</div>
+
+<div class="grid g3 mt">
+  <div class="card span2">
+    <div class="flex between"><h2>Daily volume (TND)</h2><span class="side read">DailyBankStats</span></div>
+    <canvas id="volume" height="110"></canvas>
+  </div>
+  <div class="card">
+    <div class="flex between"><h2>Open a new account</h2><span class="side write">command</span></div>
+    <form method="post" action="{% url 'open_account' %}">{% csrf_token %}
+      <div class="field"><label>Owner name</label><input name="owner_name" required minlength="2" placeholder="e.g. Amira Jlassi"></div>
+      <div class="flex mt">
+        <div class="field"><label>Type</label><select name="account_type"><option>CURRENT</option><option>SAVINGS</option><option>ESCROW</option></select></div>
+        <div class="field"><label>Initial deposit (TND)</label><input name="initial_deposit" type="number" step="0.001" min="0" value="500"></div>
+      </div>
+      <button class="btn write mt" type="submit">Open account &rarr; append AccountOpened</button>
+    </form>
+  </div>
+</div>
+
+<div class="grid g3 mt">
+  <div class="card flush span2">
+    <h2 class="flex between">Accounts <span class="side read">AccountSummary</span></h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Owner</th><th>Type</th><th class="num">Ledger balance</th><th class="num">In escrow</th><th class="num">Available</th><th class="num">Version</th><th></th></tr></thead>
+      <tbody>{% for a in accounts %}
+        <tr><td><a href="{% url 'account' a.account_id %}"><b>{{ a.owner_name }}</b></a><br><span class="muted mono">{{ a.short_id }}</span></td>
+          <td><span class="tag">{{ a.account_type }}</span></td>
+          <td class="num"><b>{{ a.ledger_balance|tnd }}</b></td><td class="num">{{ a.held_amount|tnd }}</td>
+          <td class="num">{{ a.available_balance|tnd }}</td><td class="num mono">v{{ a.last_version }}</td>
+          <td class="right"><a class="btn ghost small" href="{% url 'replay' a.account_id %}">Replay</a>
+            <a class="btn ghost small" href="{% url 'audit' a.account_id %}">AI audit</a></td></tr>
+      {% empty %}<tr><td colspan="7" class="muted">No accounts yet. Run <code>python manage.py seed_demo</code> or open one.</td></tr>{% endfor %}
+      </tbody></table></div>
+  </div>
+  <div class="card flush" hx-get="{% url 'recent_events' %}" hx-trigger="load, every 2s" hx-swap="innerHTML">
+    <p class="muted" style="padding:16px">Loading live event stream&hellip;</p>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const d = {{ chart|safe }};
+new Chart(document.getElementById('volume'), {
+  type: 'bar',
+  data: { labels: d.labels, datasets: [
+    { label: 'Deposits', data: d.deposits, backgroundColor: '#0f9d8a' },
+    { label: 'Withdrawals', data: d.withdrawals, backgroundColor: '#e11d48' },
+    { label: 'Transfers', data: d.transfers, backgroundColor: '#1d4ed8' } ] },
+  options: { responsive: true, plugins: { legend: { position: 'bottom' } },
+    scales: { x: { stacked: false, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+              y: { type: 'logarithmic', title: { display: true, text: 'TND (log scale)' } } } }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends "web/base.html" %}{% load ledger_extras %}
+{% block title %}{{ a.owner_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ a.owner_name }} <span class="tag">{{ a.account_type }}</span></h1>
+    <p class="sub mono">Stream id {{ a.account_id }}</p>
+  </div>
+  <div class="flex">
+    <a class="btn ghost" href="{% url 'replay' a.account_id %}">&#9201; Temporal replay &amp; time travel</a>
+    <a class="btn accent" href="{% url 'audit' a.account_id %}">&#10003; AI audit assistant</a>
+  </div>
+</div>
+
+<div class="grid g4">
+  <div class="card kpi"><div class="label">Ledger balance</div><div class="value">{{ a.ledger_balance|tnd }} <small>TND</small></div></div>
+  <div class="card kpi"><div class="label">Blocked in escrow</div><div class="value">{{ a.held_amount|tnd }} <small>TND</small></div><div class="hint">{{ a.active_holds }} active hold{{ a.active_holds|pluralize }}</div></div>
+  <div class="card kpi"><div class="label">Available</div><div class="value">{{ a.available_balance|tnd }} <small>TND</small></div></div>
+  <div class="card kpi"><div class="label">Version (optimistic lock)</div>
+    <div class="value mono">v{{ a.last_version }}</div>
+    <div class="hint">read model v{{ a.last_version }} &middot; event store v{{ write_version }}
+      {% if write_version != a.last_version %}<span class="tag warn">projection lag</span>{% else %}<span class="tag ok">in sync</span>{% endif %}</div></div>
+</div>
+
+<div class="card mt">
+  <div class="flex between"><h2>Commands <span class="side write">write model</span></h2>
+    <span class="muted" style="font-size:12.5px">Each form sends <code>expected_version={{ a.last_version }}</code>. If the account changed meanwhile, the command is refused (optimistic concurrency).</span></div>
+  <div class="cmd-grid">
+    <form class="cmd" method="post" action="{% url 'account_command' a.account_id 'deposit' %}">{% csrf_token %}
+      <h4>Deposit <span class="tag FundsDeposited">FundsDeposited</span></h4>
+      <input type="hidden" name="expected_version" value="{{ a.last_version }}">
+      <div class="inline" style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="field"><label>Amount (TND)</label><input name="amount" type="number" step="0.001" min="0.001" required></div>
+        <div class="field"><label>Channel</label><select name="channel"><option>BRANCH</option><option>MOBILE</option><option>ATM</option><option>WIRE</option><option>CHEQUE</option></select></div>
+        <div class="field"><label>Reference</label><input name="reference" maxlength="160"></div>
+        <button class="btn write">Deposit</button></div>
+    </form>
+    <form class="cmd" method="post" action="{% url 'account_command' a.account_id 'withdraw' %}">{% csrf_token %}
+      <h4>Withdraw <span class="tag FundsWithdrawn">FundsWithdrawn</span></h4>
+      <input type="hidden" name="expected_version" value="{{ a.last_version }}">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="field"><label>Amount (TND)</label><input name="amount" type="number" step="0.001" min="0.001" required></div>
+        <div class="field"><label>Reference</label><input name="reference" maxlength="160"></div>
+        <button class="btn write">Withdraw</button></div>
+    </form>
+    <form class="cmd" method="post" action="{% url 'account_command' a.account_id 'reserve' %}">{% csrf_token %}
+      <h4>Place escrow hold <span class="tag FundsReserved">FundsReserved</span></h4>
+      <input type="hidden" name="expected_version" value="{{ a.last_version }}">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="field"><label>Amount (TND)</label><input name="amount" type="number" step="0.001" min="0.001" required></div>
+        <div class="field"><label>Beneficiary</label><select name="beneficiary_id">{% for o in others %}<option value="{{ o.account_id }}">{{ o.owner_name }}</option>{% endfor %}</select></div>
+        <div class="field"><label>Reason</label><input name="reason" maxlength="160" placeholder="e.g. car purchase escrow"></div>
+        <button class="btn write">Reserve</button></div>
+    </form>
+    <form class="cmd" method="post" action="{% url 'account_command' a.account_id 'transfer' %}">{% csrf_token %}
+      <h4>Direct transfer <span class="tag TransferSettled">TransferSettled</span></h4>
+      <input type="hidden" name="expected_version" value="{{ a.last_version }}">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="field"><label>Amount (TND)</label><input name="amount" type="number" step="0.001" min="0.001" required></div>
+        <div class="field"><label>To account</label><select name="to_account_id">{% for o in others %}<option value="{{ o.account_id }}">{{ o.owner_name }}</option>{% endfor %}</select></div>
+        <div class="field"><label>Reference</label><input name="reference" maxlength="160"></div>
+        <button class="btn write">Transfer</button></div>
+    </form>
+    <form class="cmd" method="post" action="{% url 'account_command' a.account_id 'fee' %}">{% csrf_token %}
+      <h4>Charge fee <span class="tag FeeCharged">FeeCharged</span></h4>
+      <input type="hidden" name="expected_version" value="{{ a.last_version }}">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="field"><label>Amount (TND)</label><input name="amount" type="number" step="0.001" min="0.001" required></div>
+        <div class="field"><label>Reason</label><input name="reason" maxlength="160"></div>
+        <button class="btn write">Charge</button></div>
+    </form>
+    <form class="cmd" method="post" action="{% url 'account_command' a.account_id 'reverse_fee' %}">{% csrf_token %}
+      <h4>Reverse a fee <span class="tag FeeReversed">FeeReversed</span></h4>
+      <input type="hidden" name="expected_version" value="{{ a.last_version }}">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="field"><label>Fee</label><select name="fee_id">{% for f in open_fees %}<option value="{{ f.business_ref }}">{{ f.business_ref }} &middot; {{ f.amount|tnd }} &middot; {{ f.timestamp|date:"d M" }}</option>{% empty %}<option value="">no reversible fee</option>{% endfor %}</select></div>
+        <div class="field"><label>Justification</label><input name="reason" required minlength="3" maxlength="160"></div>
+        <button class="btn write">Reverse</button></div>
+    </form>
+  </div>
+  {% if active_holds %}
+  <h3 class="mt">Active escrow holds</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Hold</th><th>Beneficiary</th><th>Reason</th><th class="num">Amount</th><th>Actions</th></tr></thead>
+    <tbody>{% for h in active_holds %}
+    <tr><td class="mono">{{ h.hold_id }}</td><td>{{ h.beneficiary_name }}</td><td>{{ h.reason }}</td><td class="num">{{ h.amount|tnd }}</td>
+      <td class="flex">
+        <form method="post" action="{% url 'account_command' a.account_id 'settle' %}">{% csrf_token %}
+          <input type="hidden" name="expected_version" value="{{ a.last_version }}"><input type="hidden" name="hold_id" value="{{ h.hold_id }}">
+          <button class="btn accent small">Settle to beneficiary</button></form>
+        <form method="post" action="{% url 'account_command' a.account_id 'release' %}">{% csrf_token %}
+          <input type="hidden" name="expected_version" value="{{ a.last_version }}"><input type="hidden" name="hold_id" value="{{ h.hold_id }}">
+          <input type="hidden" name="reason" value="Released from UI"><button class="btn ghost small">Release</button></form>
+      </td></tr>{% endfor %}</tbody></table></div>
+  {% endif %}
+  <div class="flex mt" style="border-top:1px solid var(--line);padding-top:12px">
+    <form method="post" action="{% url 'race_demo' a.account_id %}">{% csrf_token %}
+      <button class="btn ghost">&#9889; Concurrency race demo</button></form>
+    <span class="muted" style="font-size:12.5px">Two clerks load version v{{ write_version }} at the same instant and both deposit 10.000 TND.
+      The event store's unique (stream, version) key lets exactly one win.</span>
+  </div>
+</div>
+
+<div class="card flush mt">
+  <h2 class="flex between">Statement <span class="side read">LedgerEntry &middot; one line per immutable event</span></h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Event id</th><th>Type</th><th>Date</th><th>Description</th><th class="num">Amount</th><th class="num">Balance after</th><th class="num">Available</th></tr></thead>
+    <tbody>{% for e in entries %}
+    <tr><td class="mono"><a href="{% url 'replay' a.account_id %}?step={{ e.version }}">{{ e.event_id }}</a></td>
+      <td><span class="tag {{ e.event_type }}">{{ e.event_type }}</span></td>
+      <td style="white-space:nowrap">{{ e.timestamp|date:"d M Y H:i" }}</td>
+      <td>{{ e.description }}{% if e.counterparty_name %}<br><span class="muted">counterparty: {{ e.counterparty_name }}</span>{% endif %}</td>
+      <td class="num {% if e.amount > 0 %}pos{% elif e.amount < 0 %}neg{% endif %}">{% if e.amount %}{{ e.amount|tnd }}{% else %}&mdash;{% endif %}</td>
+      <td class="num"><b>{{ e.balance_after|tnd }}</b></td><td class="num">{{ e.available_after|tnd }}</td></tr>
+    {% endfor %}</tbody></table></div>
+</div>
+{% endblock %}

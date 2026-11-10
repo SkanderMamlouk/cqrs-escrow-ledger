@@ -1,0 +1,12 @@
+{% load ledger_extras %}
+<h2 class="flex between">Live event stream <span class="side read">LedgerEntry</span></h2>
+<p class="muted" style="padding:0 18px;margin:0 0 6px;font-size:12px">Auto-refresh every 2 s (HTMX) &middot; projector at #{{ status.position }} / head #{{ status.head }}</p>
+<table>
+  <tbody>{% for e in entries %}
+  <tr><td style="width:46px" class="mono muted">#{{ e.position }}</td>
+    <td><span class="tag {{ e.event_type }}">{{ e.event_type }}</span><br>
+      <span style="font-size:12.5px">{{ e.owner_name }}</span></td>
+    <td class="num {% if e.amount > 0 %}pos{% elif e.amount < 0 %}neg{% endif %}">{% if e.amount %}{{ e.amount|tnd }}{% else %}&mdash;{% endif %}<br>
+      <span class="muted" style="font-size:11.5px">{{ e.timestamp|date:"d M H:i" }}</span></td></tr>
+  {% empty %}<tr><td class="muted">No events projected yet.</td></tr>{% endfor %}</tbody>
+</table>

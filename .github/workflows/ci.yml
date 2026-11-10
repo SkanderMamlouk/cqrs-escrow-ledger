@@ -1,0 +1,61 @@
+# Automatic verification gate: runs on every push / pull request.
+# If any test or any ledger consistency check fails, the commit is marked red.
+name: CI - tests & ledger verification gate
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        db_mode: [postgres, sqlite]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DB_MODE: ${{ matrix.db_mode }}
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      AI_PROVIDER: deterministic
+      WEBHOOK_URLS: http://127.0.0.1:9/unused
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Unit & integration tests (pytest)
+        run: python -m pytest -v
+      - name: Build the demo ledger from commands
+        run: |
+          python manage.py migrate --noinput
+          python manage.py seed_demo
+      - name: Rebuild the read model from the event log
+        run: python manage.py rebuild_projections
+      - name: Deterministic verification gate
+        run: python manage.py verify_ledger --json var/verification_report.json
+      - name: Quick benchmark (real numbers on the CI runner)
+        run: python manage.py benchmark --quick
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reports-${{ matrix.db_mode }}
+          path: |
+            var/verification_report.json
+            benchmarks/results/

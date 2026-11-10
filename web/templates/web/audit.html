@@ -1,0 +1,42 @@
+{% extends "web/base.html" %}{% load ledger_extras %}
+{% block title %}AI audit {{ a.owner_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>AI audit assistant &mdash; {{ a.owner_name }}</h1>
+    <p class="sub">The AI summarizes how the account changed over time. Its answer is shown <b>only</b> if a deterministic
+      verifier confirms every cited event id, timestamp and amount against the immutable event store.</p>
+  </div>
+  <a class="btn ghost" href="{% url 'account' a.account_id %}">&larr; Back to account</a>
+</div>
+
+<div class="grid g3">
+  <div class="card span2">
+    <h2>Run an audit</h2>
+    <form method="post" class="inline" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').innerText='Auditing... (local AI can take 10-60 s)'">{% csrf_token %}
+      <div class="field"><label>From (optional)</label><input type="datetime-local" name="start"></div>
+      <div class="field"><label>To (optional)</label><input type="datetime-local" name="end"></div>
+      <button class="btn accent">Generate verified audit</button>
+    </form>
+    <p class="muted" style="font-size:12.5px;margin-bottom:0">Pipeline: evidence pack (left-fold over events) &rarr; AI writes JSON &rarr;
+      7 deterministic checks &rarr; on rejection the reasons are sent back for a retry &rarr; if still rejected, a deterministic template is used.</p>
+  </div>
+  <div class="card">
+    <h2>AI provider</h2>
+    <p><span class="tag {% if provider.name == 'deterministic' %}warn{% else %}ok{% endif %}">{{ provider.name }}</span> <span class="mono">{{ provider.model }}</span></p>
+    <p class="muted" style="font-size:12.5px">{{ provider.reason }}</p>
+    <p class="muted" style="font-size:12px;margin-bottom:0">Change it in <code>.env</code>: <code>AI_PROVIDER=auto|ollama|gemini|deterministic</code></p>
+  </div>
+</div>
+
+<div class="card flush mt">
+  <h2>Previous audit runs (traceable)</h2>
+  <table><thead><tr><th>#</th><th>Date</th><th>Window</th><th>Status</th><th>Provider</th><th class="num">Latency</th><th></th></tr></thead>
+  <tbody>{% for r in runs %}
+    <tr><td>{{ r.id }}</td><td>{{ r.created_at|date:"d M Y H:i:s" }}</td>
+      <td>{% if r.window_start %}{{ r.window_start|date:"d M" }}{% else %}opening{% endif %} &rarr; {% if r.window_end %}{{ r.window_end|date:"d M" }}{% else %}now{% endif %}</td>
+      <td><span class="tag {{ r.status }}">{{ r.status }}</span></td><td>{{ r.provider }} <span class="muted mono">{{ r.model }}</span></td>
+      <td class="num">{{ r.latency_ms }} ms</td><td><a href="{% url 'audit_run' r.id %}">Open</a></td></tr>
+  {% empty %}<tr><td colspan="7" class="muted">No audit yet.</td></tr>{% endfor %}</tbody></table>
+</div>
+{% endblock %}
