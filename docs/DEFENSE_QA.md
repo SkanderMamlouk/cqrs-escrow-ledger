@@ -15,8 +15,8 @@ When two writers load version 13 and both try to insert version 14 (our "Concurr
 If the account has moved on, we raise `ConcurrencyConflict` before even trying. Nothing is locked while the user reads, hence "optimistic".
 
 **Q4. Why are snapshots needed? Don't they break immutability?**
-Replaying 2,550 events took 134.3 ms in our measurement; starting from the snapshot at v2,500 and replaying the 50 delta
-events took 3.77 ms (≈ 36× faster). A snapshot is
+Replaying 2,550 events took 65.2 ms in our measurement; starting from the snapshot at v2,500 and replaying the 50 delta
+events took 1.94 ms (≈ 34× faster). A snapshot is
 only a cache of the state at version N, stored separately. Events are never changed, and the verification gate checks
 that every snapshot equals the full replay.
 
@@ -26,7 +26,7 @@ to `FundsDeposited`), we set `class_version = 2` and write `upcast_v1_v2()`, whi
 old event is read. The demo contains a real v1 row (Karim's legacy deposit).
 
 **Q6. What is eventual consistency? Isn't it dangerous for a bank?**
-The read model is updated asynchronously, about 207 ms (median, p95 239 ms) after the write in our benchmark. Business
+The read model is updated asynchronously, about 204 ms (median, p95 207 ms) after the write in our benchmark. Business
 decisions (enough funds? right version?) are always taken on the **write side**, which is strongly consistent, because the
 aggregate is rebuilt from the event store. Only the screens can be a fraction of a second behind, and the UI waits
 for its own writes ("read your writes").
@@ -60,7 +60,7 @@ It is a mature library (John Bywater, v9.5) that provides aggregates, the `@even
 an ordered notification log, snapshots and upcasting. We focused on the business domain, the projections and the verification.
 
 **Q13. Where are the numbers in your slides from?**
-From `python manage.py benchmark --lag` (JSON in `benchmarks/results/`), measured on our laptop on 10 Nov 2026.
+From `python manage.py benchmark --lag` (JSON in `benchmarks/results/`), measured on our team PC (Intel Core i5-13450HX, 16 GB RAM) on 10 Nov 2026.
 Anyone can re-run it. Nothing is estimated or invented.
 
 **Q14. How do you deploy it?**

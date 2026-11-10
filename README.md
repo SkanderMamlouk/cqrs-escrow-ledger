@@ -143,8 +143,8 @@ scripts/        Windows setup / start scripts used by the .bat files
 | `/alerts/` | read model | webhook outbox (sent) and inbox (received, HMAC valid) |
 | `/system/` | both | configuration, projector checkpoint and lag, **Run verification gate**, **Wipe & rebuild read model** |
 
-## 7. Measured performance (development laptop)
-Measured by `python manage.py benchmark --lag` on 10 Nov 2026 (19:50 UTC), on an AMD Ryzen 3 7320U with 5.7 GB RAM, Windows 11,
+## 7. Measured performance (team PC)
+Measured by `python manage.py benchmark --lag` on 10 Nov 2026 (23:34 UTC), on a 13th Gen Intel Core i5-13450HX with 16 GB RAM, Windows 11,
 Python 3.12 and embedded PostgreSQL 16, on the clean demo data (6 accounts, 98 events). Raw data:
 [benchmarks/results/benchmark_embedded.json](benchmarks/results/benchmark_embedded.json).
 Re-run the command on your own PC. The JSON file and the charts are rewritten in `benchmarks/results/`.
@@ -152,13 +152,13 @@ Stream lengths are deliberately **not** multiples of the snapshot interval, so e
 
 | Measurement (median after warm-up; 15–40 runs) | Result |
 |---|---|
-| Rebuild a 2,550-event account, full left-fold | 134.3 ms |
-| Same from the snapshot at v2,500 + 50 delta events | 3.77 ms (≈ 36× faster) |
-| Rebuild a 150-event account: full / snapshot + 50 delta | 8.6 ms / 3.8 ms |
-| "List all balances" (6 accounts, 98 events): read-model SELECT | 0.52 ms |
-| Same by replaying the streams: with snapshots / without | 5.22 ms / 8.60 ms |
-| Write throughput (load + decide + atomic append, one command at a time, 1 event each) | 160–191 commands/s |
-| Eventual-consistency lag (projector polls every 0.2 s, 40 probes) | median 207 ms · p95 239 ms |
+| Rebuild a 2,550-event account, full left-fold | 65.2 ms |
+| Same from the snapshot at v2,500 + 50 delta events | 1.94 ms (≈ 34× faster) |
+| Rebuild a 150-event account: full / snapshot + 50 delta | 4.1 ms / 1.71 ms |
+| "List all balances" (6 accounts, 98 events): read-model SELECT | 0.28 ms |
+| Same by replaying the streams: with snapshots / without | 2.72 ms / 4.26 ms |
+| Write throughput (load + decide + atomic append, one command at a time, 1 event each) | 351–403 commands/s |
+| Eventual-consistency lag (projector polls every 0.2 s, 40 probes) | median 204 ms · p95 207 ms |
 
 ## 8. Troubleshooting
 * **The read model is not updated** / "projector not running?" → START.bat opens a second window running `run_projector`. Keep it open.

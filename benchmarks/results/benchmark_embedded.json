@@ -1,9 +1,9 @@
 {
-  "measured_at": "2026-11-10T19:50:53+00:00",
+  "measured_at": "2026-11-10T23:34:34+00:00",
   "machine": {
     "os": "Windows 11",
-    "cpu": "AMD64 Family 23 Model 160 Stepping 0, AuthenticAMD",
-    "cpu_count": 8,
+    "cpu": "Intel64 Family 6 Model 191 Stepping 2, GenuineIntel",
+    "cpu_count": 16,
     "python": "3.12.10"
   },
   "db_mode": "embedded",
@@ -13,126 +13,126 @@
       "stream_length": 150,
       "delta_events_after_snapshot": 50,
       "full_replay": {
-        "median_ms": 8.628,
-        "p95_ms": 9.461,
-        "min_ms": 8.038,
+        "median_ms": 4.091,
+        "p95_ms": 5.602,
+        "min_ms": 3.944,
         "runs": 15
       },
       "snapshot_plus_delta": {
-        "median_ms": 3.805,
-        "p95_ms": 4.236,
-        "min_ms": 3.388,
+        "median_ms": 1.706,
+        "p95_ms": 1.929,
+        "min_ms": 1.584,
         "runs": 15
       },
-      "speedup": 2.3
+      "speedup": 2.4
     },
     {
       "stream_length": 550,
       "delta_events_after_snapshot": 50,
       "full_replay": {
-        "median_ms": 31.909,
-        "p95_ms": 35.395,
-        "min_ms": 28.651,
+        "median_ms": 13.894,
+        "p95_ms": 14.65,
+        "min_ms": 13.692,
         "runs": 15
       },
       "snapshot_plus_delta": {
-        "median_ms": 3.699,
-        "p95_ms": 4.864,
-        "min_ms": 3.392,
+        "median_ms": 1.782,
+        "p95_ms": 1.89,
+        "min_ms": 1.556,
         "runs": 15
       },
-      "speedup": 8.6
+      "speedup": 7.8
     },
     {
       "stream_length": 1050,
       "delta_events_after_snapshot": 50,
       "full_replay": {
-        "median_ms": 56.494,
-        "p95_ms": 61.732,
-        "min_ms": 53.552,
+        "median_ms": 26.896,
+        "p95_ms": 28.238,
+        "min_ms": 25.884,
         "runs": 15
       },
       "snapshot_plus_delta": {
-        "median_ms": 3.9,
-        "p95_ms": 4.923,
-        "min_ms": 3.596,
+        "median_ms": 1.73,
+        "p95_ms": 1.836,
+        "min_ms": 1.586,
         "runs": 15
       },
-      "speedup": 14.5
+      "speedup": 15.5
     },
     {
       "stream_length": 2550,
       "delta_events_after_snapshot": 50,
       "full_replay": {
-        "median_ms": 134.292,
-        "p95_ms": 141.114,
-        "min_ms": 130.641,
+        "median_ms": 65.248,
+        "p95_ms": 79.386,
+        "min_ms": 61.566,
         "runs": 15
       },
       "snapshot_plus_delta": {
-        "median_ms": 3.766,
-        "p95_ms": 4.664,
-        "min_ms": 3.353,
+        "median_ms": 1.944,
+        "p95_ms": 2.305,
+        "min_ms": 1.779,
         "runs": 15
       },
-      "speedup": 35.7
+      "speedup": 33.6
     }
   ],
   "B2_write_throughput": [
     {
       "events": 148,
-      "seconds": 0.776,
-      "events_per_second": 190.6
+      "seconds": 0.368,
+      "events_per_second": 402.6
     },
     {
       "events": 548,
-      "seconds": 3.435,
-      "events_per_second": 159.5
+      "seconds": 1.467,
+      "events_per_second": 373.6
     },
     {
       "events": 1048,
-      "seconds": 6.034,
-      "events_per_second": 173.7
+      "seconds": 2.784,
+      "events_per_second": 376.5
     },
     {
       "events": 2548,
-      "seconds": 14.812,
-      "events_per_second": 172.0
+      "seconds": 7.262,
+      "events_per_second": 350.8
     }
   ],
   "B3_queries": {
     "accounts": 6,
     "events": 98,
     "read_model_account_list": {
-      "median_ms": 0.523,
-      "p95_ms": 1.034,
-      "min_ms": 0.51,
+      "median_ms": 0.278,
+      "p95_ms": 0.476,
+      "min_ms": 0.228,
       "runs": 30
     },
     "event_store_replay_with_snapshots": {
-      "median_ms": 5.224,
-      "p95_ms": 6.811,
-      "min_ms": 3.696,
+      "median_ms": 2.716,
+      "p95_ms": 3.237,
+      "min_ms": 2.173,
       "runs": 15
     },
     "event_store_full_replay": {
-      "median_ms": 8.598,
-      "p95_ms": 8.959,
-      "min_ms": 7.571,
+      "median_ms": 4.261,
+      "p95_ms": 4.536,
+      "min_ms": 3.823,
       "runs": 15
     },
     "read_model_statement_50_lines": {
-      "median_ms": 1.415,
-      "p95_ms": 2.036,
-      "min_ms": 1.254,
+      "median_ms": 0.657,
+      "p95_ms": 0.826,
+      "min_ms": 0.538,
       "runs": 30
     }
   },
   "B4_projection_lag": {
     "poll_interval_s": 0.2,
-    "median_ms": 206.561,
-    "p95_ms": 238.697,
-    "min_ms": 57.955,
+    "median_ms": 203.787,
+    "p95_ms": 206.653,
+    "min_ms": 52.667,
     "runs": 40
   }
 }
