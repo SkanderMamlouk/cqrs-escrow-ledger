@@ -1,8 +1,5 @@
-"""Business errors raised by the write model (they never create an event)."""
-
-
 class LedgerError(Exception):
-    """Base class: a command was refused because it breaks a business rule."""
+    pass
 
 
 class InvalidAmount(LedgerError):
@@ -26,13 +23,6 @@ class AccountNotFound(LedgerError):
 
 
 class ConcurrencyConflict(LedgerError):
-    """Optimistic concurrency control: somebody changed the account first.
-
-    The user (or program) expected the account to be at version N, but the
-    event store already contains version N+1 or more.  Nothing is written;
-    the caller must reload the account and try again.
-    """
-
     def __init__(self, account_id, expected_version, actual_version):
         self.account_id = account_id
         self.expected_version = expected_version
@@ -42,3 +32,4 @@ class ConcurrencyConflict(LedgerError):
             f"you expected version {expected_version} but it is now at version {actual_version}. "
             "Reload the page and try again."
         )
+

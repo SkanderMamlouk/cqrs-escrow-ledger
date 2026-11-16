@@ -1,45 +1,3 @@
-"""
-THE APPLICATION LAYER - command handlers + event store access
-==============================================================
-
-Plain-language summary
-----------------------
-The web site never touches the BankAccount object directly.  It calls a
-COMMAND HANDLER here, e.g. `app.deposit(account_id, amount)`, which always
-follows the same 4 steps:
-
-    1. LOAD     rebuild the account from the event store
-                (latest snapshot + the few events after it)
-    2. CHECK    optimistic concurrency: is the account still at the version
-                the user saw on screen?  If not -> ConcurrencyConflict
-    3. DECIDE   call the aggregate command (deposit, withdraw...) which
-                checks the business rules and creates new pending events
-    4. SAVE     append the new events to the event store in ONE atomic
-                transaction.  The store has a UNIQUE (stream id, version)
-                key, so if somebody else wrote the same version in the
-                meantime, the save fails and nothing is written.
-
-`BankingApplication` inherits from `eventsourcing.application.Application`,
-which gives us for free:
-    * self.save(...)                  -> append events (atomic)
-    * self.repository.get(id, version)-> rebuild an aggregate (uses snapshots)
-    * self.events / self.snapshots    -> the event store and snapshot store
-    * self.recorder.select_notifications(...) -> the global, ordered log of
-      all events, used by the read-model projector.
-
-Official references used in this file
-  * eventsourcing library (v9.5.6): https://github.com/pyeventsourcing/eventsourcing
-  * Application and repository:     https://eventsourcing.readthedocs.io/en/stable/topics/application.html#repository
-  * saving several aggregates in one transaction (transfers):
-                                    https://eventsourcing.readthedocs.io/en/stable/topics/application.html#saving-multiple-aggregates
-  * automatic snapshotting:          https://eventsourcing.readthedocs.io/en/stable/topics/application.html#automatic-snapshotting
-  * notification log:                https://eventsourcing.readthedocs.io/en/stable/topics/application.html#notification-log
-
-Snapshots: every SNAPSHOT_INTERVAL events (default 5), the library stores a
-copy of the account state.  Rebuilding then starts from the most recent
-snapshot and only replays the events after it ("snapshot + delta replay").
-"""
-
 from __future__ import annotations
 
 import threading
@@ -59,14 +17,12 @@ from banking.exceptions import AccountNotFound, ConcurrencyConflict, InvalidAmou
 
 @dataclass
 class RecordedEvent:
-    """What the UI shows after a command: which immutable event was appended."""
-
     event_id: str
     event_type: str
     account_id: UUID
     version: int
     timestamp: datetime
-    position: int | None  # global position in the event log (notification id)
+    position: int | None
     description: str
 
 
@@ -80,21 +36,17 @@ class CommandResult:
 
 @dataclass
 class TimeTravelResult:
-    """State of an account at a past moment, and HOW it was rebuilt."""
-
     account: BankAccount | None
     at: datetime
-    version: int  # last event version <= at (0 = account did not exist yet)
+    version: int
     total_versions: int
-    snapshot_version: int | None  # snapshot used as the starting point
-    replayed_events: int  # events replayed on top of the snapshot
+    snapshot_version: int | None
+    replayed_events: int
 
 
 class BankingApplication(Application[UUID]):
-    """Core Banking & Escrow Ledger - write side of CQRS."""
-
     name = "BankingLedger"
-    snapshotting_intervals = {BankAccount: 5}  # overridden from env below
+    snapshotting_intervals = {BankAccount: 5}
 
     def __init__(self, env: dict[str, str] | None = None) -> None:
         super().__init__(env)
@@ -102,9 +54,6 @@ class BankingApplication(Application[UUID]):
         self.snapshot_interval = interval
         self.snapshotting_intervals = {BankAccount: interval}
 
-    # ================================================================== #
-    # Internal helpers
-    # ================================================================== #
     def _load(self, account_id: UUID) -> BankAccount:
         try:
             return self.repository.get(account_id)
@@ -135,13 +84,6 @@ class BankingApplication(Application[UUID]):
         expected_version: int | None = None,
         max_attempts: int = 3,
     ) -> tuple[list[RecordedEvent], Any]:
-        """LOAD -> CHECK -> DECIDE -> SAVE, with optimistic concurrency.
-
-        * If the caller gave `expected_version` (the version shown on screen)
-          and the account moved on, we refuse with ConcurrencyConflict.
-        * If no expected version was given, a conflict during SAVE simply
-          means "somebody was faster": we reload and retry (max 3 times).
-        """
         for _attempt in range(max_attempts):
             accounts = [self._load(aid) for aid in account_ids]
             first = accounts[0]
@@ -149,21 +91,16 @@ class BankingApplication(Application[UUID]):
                 raise ConcurrencyConflict(first.id, expected_version, first.version)
             outcome = decide(*accounts)
             try:
-                recordings = self.save(*accounts)  # atomic append (all or nothing)
+                recordings = self.save(*accounts)
             except IntegrityError:
                 if expected_version is not None:
                     latest = self._load(first.id)
                     if latest.version != expected_version:
                         raise ConcurrencyConflict(first.id, expected_version, latest.version) from None
-                    # the account the user looked at did not change: the conflict was on the
-                    # OTHER account of a transfer, so simply retry with fresh state
-                continue  # retry with fresh state
+                continue
             return self._recorded(recordings), outcome
         raise ConcurrencyConflict(account_ids[0], None, "unknown (too many concurrent writers)")
 
-    # ================================================================== #
-    # COMMAND HANDLERS (the "C" of CQRS)
-    # ================================================================== #
     def open_account(
         self, owner_name: str, account_type: str = "CURRENT", currency: str = "TND", initial_deposit: int = 0
     ) -> CommandResult:
@@ -189,7 +126,7 @@ class BankingApplication(Application[UUID]):
             beneficiary_uuid = UUID(str(beneficiary_id))
         except ValueError:
             raise InvalidAmount("An escrow hold needs a valid beneficiary account.") from None
-        self._load(beneficiary_uuid)  # the beneficiary account must exist
+        self._load(beneficiary_uuid)
         if beneficiary_uuid == account_id:
             raise InvalidAmount("An escrow hold cannot designate the same account as beneficiary.")
         beneficiary = str(beneficiary_uuid)
@@ -205,7 +142,6 @@ class BankingApplication(Application[UUID]):
 
     def settle_escrow(self, account_id: UUID, hold_id: str, reference: str = "",
                       expected_version: int | None = None) -> CommandResult:
-        """Pay the held money to the beneficiary: 2 events, 2 streams, 1 transaction."""
         account = self._load(account_id)
         hold = account.holds.get(hold_id)
         if hold is None:
@@ -246,9 +182,6 @@ class BankingApplication(Application[UUID]):
         events, _ = self._execute([account_id], lambda a: a.reverse_fee(fee_id, reason), expected_version)
         return CommandResult(f"Fee {fee_id} reversed.", events, account_id)
 
-    # ================================================================== #
-    # WRITE-SIDE QUERIES (read the source of truth: the event store)
-    # ================================================================== #
     def get_account(self, account_id: UUID, version: int | None = None) -> BankAccount:
         try:
             return self.repository.get(account_id, version=version)
@@ -267,14 +200,12 @@ class BankingApplication(Application[UUID]):
         return [s.originator_version for s in self.snapshots.get(account_id)]
 
     def rebuild_without_snapshot(self, account_id: UUID) -> BankAccount:
-        """Pure left-fold over ALL events (used by benchmarks and the verifier)."""
         account = project_aggregate(None, self.events.get(account_id))
         if account is None:
             raise AccountNotFound(f"Account {account_id} does not exist.")
         return account
 
     def state_at(self, account_id: UUID, at: datetime) -> TimeTravelResult:
-        """TIME TRAVEL: what did this account look like at moment `at`?"""
         events = self.get_events(account_id)
         version = 0
         for e in events:
@@ -289,15 +220,11 @@ class BankingApplication(Application[UUID]):
             snaps = list(self.snapshots.get(account_id, lte=version, desc=True, limit=1))
             if snaps:
                 snapshot_version = snaps[0].originator_version
-        account = self.repository.get(account_id, version=version)  # snapshot + delta replay
+        account = self.repository.get(account_id, version=version)
         replayed = version - (snapshot_version or 0)
         return TimeTravelResult(account, at, version, len(events), snapshot_version, replayed)
 
     def replay_steps(self, account_id: UUID) -> list[dict[str, Any]]:
-        """Replay the stream ONE event at a time and record the state after each.
-
-        This is literally the left-fold:  state_n = apply(state_{n-1}, event_n)
-        """
         steps: list[dict[str, Any]] = []
         account: BankAccount | None = None
         snapshots = set(self.snapshot_versions(account_id))
@@ -322,7 +249,6 @@ class BankingApplication(Application[UUID]):
         return steps
 
     def iter_account_ids(self) -> list[UUID]:
-        """All account streams, discovered from the global event log."""
         ids: list[UUID] = []
         start = 1
         while True:
@@ -335,15 +261,7 @@ class BankingApplication(Application[UUID]):
             start = batch[-1].id + 1
         return ids
 
-    # ================================================================== #
-    # DEMONSTRATIONS used in the presentation
-    # ================================================================== #
     def demonstrate_race(self, account_id: UUID, amount: int) -> dict[str, Any]:
-        """Two clerks load the SAME version at the SAME time and both deposit.
-
-        Exactly one save succeeds; the other one is rejected by the event
-        store's unique (stream id, version) key -> IntegrityError.
-        """
         barrier = threading.Barrier(2)
         results: dict[str, str] = {}
 
@@ -351,7 +269,7 @@ class BankingApplication(Application[UUID]):
             account = self._load(account_id)
             loaded = account.version
             account.deposit(amount, reference=f"Race test by {name}", channel="BRANCH")
-            barrier.wait()  # both clerks now try to save at the same moment
+            barrier.wait()
             try:
                 self.save(account)
                 results[name] = f"SAVED as version {loaded + 1}"
@@ -366,11 +284,6 @@ class BankingApplication(Application[UUID]):
         return results
 
     def import_legacy_v1_deposit(self, account_id: UUID, amount: int, reference: str) -> CommandResult:
-        """Simulates a deposit recorded by the OLD (schema v1) software.
-
-        The stored JSON has no "channel" field and no class_version.
-        Reading it back triggers FundsDeposited.upcast_v1_v2().
-        """
         account = self._load(account_id)
         state = self.mapper.transcoder.encode(
             {"timestamp": clock.now(), "amount": amount, "reference": reference}
@@ -387,3 +300,4 @@ class BankingApplication(Application[UUID]):
 
 def new_account_id() -> UUID:
     return uuid.uuid4()
+

@@ -2,8 +2,6 @@ from django.db import models
 
 
 class AuditRun(models.Model):
-    """One execution of the AI audit assistant (fully traceable)."""
-
     STATUS = [("VERIFIED", "AI answer verified"), ("FALLBACK", "Deterministic fallback"),
               ("REJECTED", "Rejected")]
     created_at = models.DateTimeField(auto_now_add=True)
@@ -24,3 +22,4 @@ class AuditRun(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+

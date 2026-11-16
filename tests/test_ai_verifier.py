@@ -1,5 +1,3 @@
-"""Step 4 - the AI audit assistant can never show an unverified claim."""
-
 import copy
 import json
 
@@ -87,10 +85,10 @@ def test_invented_number_in_headline_is_rejected(evidence, good):
 
 
 @pytest.mark.parametrize("sentence", [
-    "An extra TND 77777.000 was received.",          # currency before the number
-    "An extra 55555.000 Tunisian dinars arrived.",   # unusual currency wording
-    "The balance was -96500.000 at some point.",     # sign must be kept
-    "There were 9 suspicious deposits.",             # invented count
+    "An extra TND 77777.000 was received.",
+    "An extra 55555.000 Tunisian dinars arrived.",
+    "The balance was -96500.000 at some point.",
+    "There were 9 suspicious deposits.",
 ])
 def test_any_ungrounded_number_is_rejected(evidence, good, sentence):
     bad = copy.deepcopy(good)
@@ -99,9 +97,9 @@ def test_any_ungrounded_number_is_rejected(evidence, good, sentence):
 
 
 @pytest.mark.parametrize("sentence", [
-    "See also EVT-deadbeef-0042 for details.",   # reference that does not exist
+    "See also EVT-deadbeef-0042 for details.",
     "Hold HLD-ffffffff was also placed.",
-    "It happened on 31 December 1999.",          # date that is not an event date
+    "It happened on 31 December 1999.",
     "It happened on 1999-12-31.",
 ])
 def test_invented_references_and_dates_in_text_are_rejected(evidence, good, sentence):
@@ -118,7 +116,6 @@ def test_real_dates_and_references_in_text_are_accepted(evidence, good):
 
 
 def test_fallback_template_is_always_verifiable(app):
-    """Many reversals, many large holds, free text containing amounts: still verified."""
     acc = app.open_account("Stress Test", initial_deposit=m("500000")).account_id
     other = app.open_account("Beneficiary", initial_deposit=m("1")).account_id
     for i in range(5):
@@ -144,8 +141,6 @@ def test_amount_extraction():
 
 
 class FakeProvider:
-    """Simulates an LLM: hallucinates first, then corrects itself."""
-
     name, model = "fake", "fake-llm"
 
     def __init__(self, answers):
@@ -165,7 +160,7 @@ def test_retry_with_feedback_then_verified(app, evidence, good, monkeypatch):
     monkeypatch.setattr(assistant, "select_provider", lambda: (fake, ProviderInfo("fake", "fake-llm", "test")))
     run = assistant.run_audit(app, evidence.account_id)
     assert run.status == "VERIFIED" and len(run.attempts) == 2
-    assert "REJECTED BY THE VERIFIER" in fake.prompts[1]  # the reasons were sent back
+    assert "REJECTED BY THE VERIFIER" in fake.prompts[1]
 
 
 @pytest.mark.django_db
@@ -175,3 +170,4 @@ def test_always_hallucinating_model_falls_back_to_deterministic(app, evidence, m
     run = assistant.run_audit(app, evidence.account_id)
     assert run.status == "FALLBACK" and run.provider == "deterministic"
     assert run.verification["passed"] is True
+

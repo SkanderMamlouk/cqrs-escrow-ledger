@@ -1,9 +1,3 @@
-"""python manage.py run_projector  [--once]
-
-Starts the asynchronous read-model projector worker (Step 2 of the PDF).
---once : process everything that is pending, deliver webhooks, then exit.
-"""
-
 from django.core.management.base import BaseCommand
 
 from config.ledger import get_app
@@ -29,3 +23,4 @@ class Command(BaseCommand):
             projector.run_forever(opts["poll"])
         except KeyboardInterrupt:
             self.stdout.write("Projector stopped.")
+

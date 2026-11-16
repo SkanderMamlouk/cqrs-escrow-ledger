@@ -1,19 +1,14 @@
-# Core stack required by the DS1 subject (Project 14)
 Django==5.2.19
-eventsourcing[postgres]==9.5.6      # event store, aggregates, snapshots, notification log
-                                    # source: https://github.com/pyeventsourcing/eventsourcing
-                                    # docs:   https://eventsourcing.readthedocs.io/
-                                    # (eventsourcing-django 0.6 requires eventsourcing < 9.5, so it is not installed)
-psycopg[binary,pool]==3.3.8         # PostgreSQL driver used by eventsourcing 9.x and by Django
-psycopg2-binary==2.9.13             # driver named in the course PDF install command (kept for compatibility)
-pydantic==2.14.3                    # command validation + AI output schema (Pydantic v2)
+eventsourcing[postgres]==9.5.6
+psycopg[binary,pool]==3.3.8
+psycopg2-binary==2.9.13
+pydantic==2.14.3
 pytest==9.2.0
 pytest-django==4.14.0
 
-# Infrastructure helpers
-pgserver==0.1.4; python_version < "3.13"   # real PostgreSQL 16 as a pip package (DB_MODE=embedded); wheels exist for Python 3.11/3.12
-tzdata==2026.6                      # time-zone files (also copied into embedded PostgreSQL)
-httpx==0.28.1                       # HTTP client: webhooks, Ollama, Gemini
-whitenoise==6.12.0                  # serves CSS/JS without an extra web server
-gunicorn==23.0.0                    # production web server inside Docker (Linux)
-matplotlib==3.11.2                  # benchmark charts
+pgserver==0.1.4; python_version < "3.13"
+tzdata==2026.6
+httpx==0.28.1
+whitenoise==6.12.0
+gunicorn==23.0.0
+matplotlib==3.11.2

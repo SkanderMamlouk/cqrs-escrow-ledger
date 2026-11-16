@@ -12,7 +12,7 @@
 </div>
 
 <div class="card">
-  <div class="flex between"><h2>&#9201; Time travel: balance at any moment <i>t</i></h2>
+  <div class="flex between"><h2>Time travel: balance at any moment <i>t</i></h2>
     <span class="muted" style="font-size:12.5px">history from {{ first_ts|date:"d M Y H:i" }} to {{ last_ts|date:"d M Y H:i" }}</span></div>
   <form class="inline" method="get">
     <div class="field" style="max-width:260px"><label>Moment t (Africa/Tunis time)</label>
@@ -43,7 +43,7 @@
 </div>
 
 <div class="card mt">
-  <div class="flex between"><h2>Balance after every event</h2><span class="muted" style="font-size:12.5px">&#9632; teal points = versions with a stored snapshot</span></div>
+  <div class="flex between"><h2>Balance after every event</h2><span class="muted" style="font-size:12.5px">Gold dots mark the versions with a stored snapshot</span></div>
   <canvas id="balance" height="80"></canvas>
 </div>
 
@@ -71,14 +71,13 @@ const snaps = new Set(d.snapshots.map(v => 'v' + v));
 new Chart(document.getElementById('balance'), {
   type: 'line',
   data: { labels: d.labels, datasets: [
-    { label: 'Ledger balance', data: d.balance, borderColor: '#13305a', backgroundColor: '#13305a', tension: .15,
-      pointRadius: d.labels.map(l => snaps.has(l) ? 6 : 2), pointBackgroundColor: d.labels.map(l => snaps.has(l) ? '#0f9d8a' : '#13305a') },
-    { label: 'Available (balance - escrow holds)', data: d.available, borderColor: '#c2410c', borderDash: [5, 4], pointRadius: 0, tension: .15 } ] },
+    { label: 'Ledger balance', data: d.balance, borderColor: '#12392c', backgroundColor: '#12392c', tension: .15,
+      pointRadius: d.labels.map(l => snaps.has(l) ? 6 : 2), pointBackgroundColor: d.labels.map(l => snaps.has(l) ? '#c9a15d' : '#12392c') },
+    { label: 'Available (balance - escrow holds)', data: d.available, borderColor: '#a9834a', borderDash: [5, 4], pointRadius: 0, tension: .15 } ] },
   options: { responsive: true, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'bottom' } },
     scales: { y: { title: { display: true, text: 'TND' } } },
     onClick: (e, els) => { if (els.length) { window.location = '?step=' + (els[0].index + 1); } } }
 });
-// scroll only the event list (not the whole page) to the selected step
 const li = document.getElementById('step-{{ step }}'), tl = document.querySelector('.timeline');
 if (li && tl) { tl.scrollTop = li.offsetTop - tl.offsetTop - 200; }
 </script>

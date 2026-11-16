@@ -1,25 +1,3 @@
-"""
-WEBHOOKS - native event-driven workflow automation
-==================================================
-
-Plain-language summary
-----------------------
-A webhook is simply an HTTP POST that one program sends to another to say
-"something happened".  When the projector sees an important event (a large
-transfer, a fee reversal, an account running low), it writes an ALERT row in
-the `WebhookOutbox` table - inside the same transaction as the read model.
-
-This module then sends every pending alert as JSON to the URLs listed in the
-WEBHOOK_URLS setting (by default our own demo receiver /webhooks/receive/,
-visible on the "Alerts" page; you could also point it to n8n, Slack, Teams..).
-
-* Each request is SIGNED with HMAC-SHA256 using WEBHOOK_SECRET, so the
-  receiver can prove the alert really comes from our ledger.
-* If the receiver is down, we retry later with exponential back-off
-  (2, 4, 8, 16, 32 s, then every 60 s); after 10 failed attempts (about 6 minutes)
-  the alert is marked FAILED.
-"""
-
 from __future__ import annotations
 
 import hashlib
@@ -84,3 +62,4 @@ def deliver_pending(limit: int = 5) -> int:
     if delivered:
         log.info("Delivered %d webhook alert(s)", delivered)
     return delivered
+

@@ -1,12 +1,3 @@
-"""
-Django settings for the CQRS & Event Sourcing banking ledger.
-
-Every value that can change between computers (database mode, AI provider,
-API keys...) is read from environment variables, which are usually written
-in the `.env` file at the project root.  Copy `.env.example` to `.env` and
-edit it - you never need to touch this Python file.
-"""
-
 from __future__ import annotations
 
 import os
@@ -18,7 +9,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 def _load_dotenv(path: Path) -> None:
-    """Tiny .env reader: KEY=VALUE lines; real environment variables win."""
     if not path.exists():
         return
     for raw in path.read_text(encoding="utf-8").splitlines():
@@ -80,29 +70,21 @@ TEMPLATES = [
     },
 ]
 
-# --------------------------------------------------------------------------
-# The two databases of CQRS (see config/dbmode.py for the full explanation)
-# --------------------------------------------------------------------------
 DB_MODE, EVENTSTORE_ENV, _READ_DB = dbmode.resolve(BASE_DIR)
-DATABASES = {"default": _READ_DB}  # Django only ever talks to the READ database
+DATABASES = {"default": _READ_DB}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Event sourcing options
-SNAPSHOT_INTERVAL = int(os.environ.get("SNAPSHOT_INTERVAL", "5"))  # snapshot every N events
+SNAPSHOT_INTERVAL = int(os.environ.get("SNAPSHOT_INTERVAL", "5"))
 EVENTSTORE_ENV["SNAPSHOT_INTERVAL"] = str(SNAPSHOT_INTERVAL)
 PROJECTOR_POLL_SECONDS = float(os.environ.get("PROJECTOR_POLL_SECONDS", "0.2"))
-# After a command, the web page waits up to this long for the projector
-# ("read your own writes") and displays the measured eventual-consistency lag.
 READ_WAIT_SECONDS = float(os.environ.get("READ_WAIT_SECONDS", "2.5"))
 
-# Business rules for webhook alerts (amounts in TND)
 ALERT_LARGE_TRANSFER_TND = os.environ.get("ALERT_LARGE_TRANSFER_TND", "10000")
 ALERT_LOW_BALANCE_TND = os.environ.get("ALERT_LOW_BALANCE_TND", "100")
 WEBHOOK_URLS = [u.strip() for u in os.environ.get("WEBHOOK_URLS", "http://127.0.0.1:8000/webhooks/receive/").split(",") if u.strip()]
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "change-me-webhook-secret")
 
-# AI audit assistant
-AI_PROVIDER = os.environ.get("AI_PROVIDER", "auto")  # auto | ollama | gemini | deterministic
+AI_PROVIDER = os.environ.get("AI_PROVIDER", "auto")
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:7b")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
@@ -133,3 +115,4 @@ LOGGING = {
         "pgserver": {"level": "WARNING"},
     },
 }
+

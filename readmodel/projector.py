@@ -1,40 +1,3 @@
-"""
-THE PROJECTOR - turns events into read-model rows (asynchronously)
-===================================================================
-
-Plain-language summary
-----------------------
-The projector is a separate background program ("worker") started with
-
-    python manage.py run_projector
-
-It loops forever:
-
-    1. ask the event store: "give me the events AFTER position P"
-       (P = the checkpoint saved last time; every event has a global,
-        increasing position number in the event log)
-    2. for each new event, update the read tables
-       (balance, statement line, escrow status, daily totals...)
-    3. save the new checkpoint P in the SAME database transaction
-    4. if there was nothing new, sleep 0.2 s and ask again
-
-Because the web site writes events and the projector updates the read
-tables a few milliseconds LATER, the read side is "eventually consistent":
-for a very short moment the dashboard may show the previous balance.  The
-UI shows this lag live (dashboard -> "projection lag").
-
-Official references used in this file
-  * reading the ordered event log: https://eventsourcing.readthedocs.io/en/stable/topics/application.html#selecting-notifications-from-the-log
-  * the library also offers Projection / ProjectionRunner (https://eventsourcing.readthedocs.io/en/stable/topics/projection.html).
-    We wrote this small projector instead because our read model lives in
-    Django ORM tables, and the checkpoint must be saved in the SAME Django
-    transaction as those tables.
-
-Exactly-once guarantee: read rows + checkpoint are committed together.  If
-the projector crashes in the middle, the transaction is rolled back and the
-same events are processed again on restart - never skipped, never doubled.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -71,15 +34,7 @@ class LedgerProjector:
         self.large_transfer = to_millimes(Decimal(settings.ALERT_LARGE_TRANSFER_TND))
         self.low_balance = to_millimes(Decimal(settings.ALERT_LOW_BALANCE_TND))
 
-    # ------------------------------------------------------------------ #
-    # Main loop
-    # ------------------------------------------------------------------ #
     def run_once(self, batch_size: int = 200, track_lag: bool = True) -> int:
-        """Process at most `batch_size` new events. Returns how many.
-
-        track_lag: record the write->read lag of live events (False when
-        catching up or rebuilding, where old events are re-projected).
-        """
         checkpoint, _ = ProjectionCheckpoint.objects.get_or_create(name=PROJECTION_NAME)
         notifications = self.app.recorder.select_notifications(start=checkpoint.position + 1, limit=batch_size)
         if not notifications:
@@ -89,7 +44,7 @@ class LedgerProjector:
             checkpoint = ProjectionCheckpoint.objects.select_for_update().get(name=PROJECTION_NAME)
             for notification in notifications:
                 if notification.id <= checkpoint.position:
-                    continue  # another projector instance already did it
+                    continue
                 domain_event = self.app.mapper.to_domain_event(notification)
                 self.apply(notification.id, domain_event)
                 checkpoint.position = notification.id
@@ -97,7 +52,7 @@ class LedgerProjector:
                 processed += 1
                 if track_lag:
                     age_ms = (timezone.now() - domain_event.timestamp).total_seconds() * 1000
-                    if 0 <= age_ms < 60_000:  # live event (not seed history): record the lag
+                    if 0 <= age_ms < 60_000:
                         checkpoint.last_lag_ms = round(age_ms, 1)
             checkpoint.save()
         return processed
@@ -124,18 +79,14 @@ class LedgerProjector:
                 if n == 0:
                     time.sleep(poll)
             except (OperationalError, ProgrammingError, PersistenceError, ProjectionCheckpoint.DoesNotExist) as exc:
-                # read DB or event store temporarily unavailable (restart, reset, migration...)
                 log.warning("Database not ready (%s) - retrying in 2 s", (str(exc).splitlines() or ["?"])[0])
                 close_old_connections()
                 time.sleep(2)
-            except Exception:  # never let the worker die silently: log and keep going
+            except Exception:
                 log.exception("Unexpected projector error - retrying in 2 s")
                 close_old_connections()
                 time.sleep(2)
 
-    # ------------------------------------------------------------------ #
-    # One event -> read-model rows
-    # ------------------------------------------------------------------ #
     def apply(self, position: int, e: Any) -> None:
         name = event_type_name(e)
         account_id = e.originator_id
@@ -236,9 +187,6 @@ class LedgerProjector:
             stats.fees_reversed += e.amount
         stats.save()
 
-    # ------------------------------------------------------------------ #
-    # Alert rules -> transactional outbox (delivered by readmodel/webhooks.py)
-    # ------------------------------------------------------------------ #
     def _alerts(self, e: Any, name: str, eid: str, position: int, summary: AccountSummary,
                 available_before: int) -> None:
         alerts: list[tuple[str, str, str]] = []
@@ -252,7 +200,6 @@ class LedgerProjector:
             alerts.append(("LOW_AVAILABLE_BALANCE", "MEDIUM",
                            f"Available balance of {summary.owner_name} fell to {fmt(summary.available_balance)}."))
         for rule, severity, message in alerts:
-            # get_or_create: rebuilding the read model never re-sends an alert
             payload = {
                 "rule": rule, "severity": severity, "message": message, "event_id": eid,
                 "event_type": name, "position": position, "account_id": str(e.originator_id),
@@ -267,13 +214,7 @@ class LedgerProjector:
 
 
 def reset_read_model() -> None:
-    """Wipe every projected table (they can always be rebuilt from events).
-
-    The webhook outbox is kept on purpose: rebuilding must not re-send alerts.
-    """
     with transaction.atomic():
-        # lock the checkpoint row first: this waits for a running projector batch
-        # to commit, so we never delete "under" a half-written batch
         ProjectionCheckpoint.objects.get_or_create(name=PROJECTION_NAME)
         ProjectionCheckpoint.objects.select_for_update().get(name=PROJECTION_NAME)
         for model in (LedgerEntry, EscrowHold, DailyBankStats, AccountSummary):
@@ -282,7 +223,6 @@ def reset_read_model() -> None:
 
 
 def projection_status(app: Any) -> dict[str, Any]:
-    """How far behind the event store is the read model?"""
     head = app.recorder.max_notification_id() or 0
     cp = ProjectionCheckpoint.objects.filter(name=PROJECTION_NAME).first()
     position = cp.position if cp else 0
@@ -295,3 +235,4 @@ def projection_status(app: Any) -> dict[str, Any]:
         "updated_at": cp.updated_at if cp else None,
         "projector_stalled": stale,
     }
+

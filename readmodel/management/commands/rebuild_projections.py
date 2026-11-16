@@ -1,9 +1,3 @@
-"""python manage.py rebuild_projections
-
-Deletes every read-model table and rebuilds it from the event store.
-This proves the read model is disposable: the events are the only truth.
-"""
-
 import time
 
 from django.core.management.base import BaseCommand
@@ -21,3 +15,4 @@ class Command(BaseCommand):
         n = LedgerProjector(get_app()).catch_up()
         ms = (time.perf_counter() - started) * 1000
         self.stdout.write(self.style.SUCCESS(f"Rebuilt read model from {n} events in {ms:.0f} ms."))
+

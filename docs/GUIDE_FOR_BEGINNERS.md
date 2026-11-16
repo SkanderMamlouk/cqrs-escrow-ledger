@@ -43,7 +43,7 @@ Keeping writing and reading separate like this is called **CQRS**.
 | **Aggregate / aggregate root** | agrégat / racine | The strict clerk in charge of ONE notebook: they check the rules before writing | the `BankAccount` class |
 | **Version** | version | The line number in the notebook (1, 2, 3…) | `v12` on every screen |
 | **Optimistic concurrency** | concurrence optimiste | Two clerks both want to write line 13. The first one wins; the second is told "line 13 already exists, re-read the notebook" | `expected_version`, *Concurrency race demo* button |
-| **Snapshot** | instantané | A "balance carried forward" note every 5 lines, so you don't add up from the very first page | `SNAPSHOT_INTERVAL=5`, the teal **SNAPSHOT** badges |
+| **Snapshot** | instantané | A "balance carried forward" note every 5 lines, so you don't add up from the very first page | `SNAPSHOT_INTERVAL=5`, the gold **SNAPSHOT** badges |
 | **Upcasting** | migration à la lecture | An old printed form with a missing field: when you read it, you fill the field with "unknown" without changing the original paper | `FundsDeposited.upcast_v1_v2`, the "schema v1" badge on the Event Store page |
 | **CQRS** | séparation commande / requête | The kitchen (write side) and the menu board (read side) are different places | `banking/` (write) vs `readmodel/` (read) |
 | **Read model / projection** | modèle de lecture | The summary board, ready to read, with no calculation needed | tables `AccountSummary`, `LedgerEntry`, `EscrowHold`, `DailyBankStats` |
@@ -147,7 +147,7 @@ the course sheet for subject 14:
 | Link | What it is | What we take from it |
 |---|---|---|
 | https://github.com/pyeventsourcing/eventsourcing | the source code of the library (version 9.5.6 in our project) | the `Aggregate` class, the `@event` decorator, the `Application` class, snapshots and the PostgreSQL event store |
-| https://eventsourcing.readthedocs.io/ | its official documentation | we followed one section per feature: aggregates and `@event`, versioning (upcasting), repository, snapshots, notification log. Each link is written next to the code that uses it |
+| https://eventsourcing.readthedocs.io/ | its official documentation | we followed one section per feature: aggregates and `@event`, versioning (upcasting), repository, snapshots, notification log. The README lists which section goes with which file |
 | https://github.com/pyeventsourcing/eventsourcing-django | an extra package that saves the events through Django's own database layer | we tested it, but its latest version needs an older version of the library (below 9.5). We kept our version 9.5.6 and explained why (see DEFENSE_QA.md, Q15) |
 
 In one sentence for the jury: *"The library gives us the notebook (event store, aggregates, snapshots);
@@ -174,13 +174,13 @@ we wrote the bank rules, the summary board (projector), the verification gate an
 
 1. **Dashboard**: the CQRS flow strip (command → event store → projector → read model), the KPIs, and the live event stream that refreshes every 2 seconds.
 2. **Yasmine Trabelsi → Temporal replay**: click events one by one and watch the balance change (the left-fold).
-   Point at the teal **SNAPSHOT** badges every 5 events.
+   Point at the gold **SNAPSHOT** badges every 5 events.
 3. **Time travel**: type `2026-10-20 12:00`. Balance 99,487.500 TND, with 85,000 TND blocked in escrow.
    The bar shows "snapshot @ v5 + 3 delta events replayed".
 4. **Account page → Deposit 50 TND**. Read the green messages: the event id, then "read model updated XXX ms after
    the write". That is eventual consistency, measured live.
 5. **Concurrency race demo** button: one clerk is SAVED and the other is REJECTED. That is optimistic concurrency.
-6. **Event Store page**: the raw JSON rows. Find the orange **schema v1 → upcast** badge (Karim's legacy deposit).
+6. **Event Store page**: the raw JSON rows. Find the amber **schema v1 → upcast** badge (Karim's legacy deposit).
 7. **Webhook Alerts**: LARGE_TRANSFER (85,000 TND escrow), FEE_REVERSED, LOW_AVAILABLE_BALANCE, each with "HMAC valid".
 8. **AI audit** on Yasmine: the report, the citation chips (click one and it opens the exact event), and the 7 green checks.
 9. **System page → Run verification gate**: all checks PASSED. Then **Wipe & rebuild read model**: everything comes back,

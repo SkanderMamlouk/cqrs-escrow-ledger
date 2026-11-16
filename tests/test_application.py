@@ -1,5 +1,3 @@
-"""Command handlers, optimistic concurrency, snapshots, time travel, upcasting."""
-
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -28,7 +26,7 @@ def test_failed_transfer_writes_nothing(app, two_accounts):
 def test_expected_version_mismatch_is_a_concurrency_conflict(app, two_accounts):
     alice, _ = two_accounts
     version_seen_on_screen = app.get_account(alice).version
-    app.deposit(alice, m("1"))  # somebody else writes first
+    app.deposit(alice, m("1"))
     with pytest.raises(ConcurrencyConflict) as err:
         app.withdraw(alice, m("10"), expected_version=version_seen_on_screen)
     assert err.value.actual_version == version_seen_on_screen + 1
@@ -39,7 +37,7 @@ def test_race_exactly_one_writer_wins(app, two_accounts):
     before = app.get_account(alice).version
     outcome = app.demonstrate_race(alice, m("10"))
     assert sorted(v.split()[0] for v in outcome.values()) == ["REJECTED", "SAVED"]
-    assert app.get_account(alice).version == before + 1  # only one event appended
+    assert app.get_account(alice).version == before + 1
 
 
 def test_snapshot_every_n_events_and_rebuild_equivalence(app, two_accounts):
@@ -81,9 +79,9 @@ def test_legacy_v1_event_is_upcast_on_read(app, two_accounts):
     app.import_legacy_v1_deposit(bob, m("50"), "old system")
     last = app.get_events(bob)[-1]
     assert type(last).__name__ == "FundsDeposited"
-    assert last.channel == "LEGACY-UNKNOWN"  # filled by upcast_v1_v2
+    assert last.channel == "LEGACY-UNKNOWN"
     stored = app.recorder.select_events(bob)[-1]
-    assert b"channel" not in stored.state  # the stored bytes were NOT modified
+    assert b"channel" not in stored.state
     assert app.get_account(bob).balance == m("250")
 
 
@@ -112,3 +110,4 @@ def test_escrow_settlement_pays_beneficiary(app, two_accounts):
     assert app.get_account(alice).balance == m("600")
     assert app.get_account(bob).balance == m("600")
     assert app.get_account(alice).holds == {}
+

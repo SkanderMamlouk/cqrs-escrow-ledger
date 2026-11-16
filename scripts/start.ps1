@@ -1,6 +1,3 @@
-# Launches the 2 processes of the application (called by START.bat):
-#   window 1 (new)     : the PROJECTOR worker  (event log -> read model, webhooks)
-#   window 2 (this one): the WEB SERVER        http://127.0.0.1:8000
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
 $vpy = Join-Path $root ".venv\Scripts\python.exe"

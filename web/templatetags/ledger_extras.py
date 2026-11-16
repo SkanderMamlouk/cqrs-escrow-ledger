@@ -7,7 +7,6 @@ register = template.Library()
 
 @register.filter
 def tnd(millimes):
-    """{{ 1500250|tnd }} -> 1,500.250"""
     try:
         return fmt(int(millimes or 0), with_currency=False)
     except (TypeError, ValueError):
@@ -16,7 +15,6 @@ def tnd(millimes):
 
 @register.filter
 def tojson(value):
-    """Pretty JSON (datetimes / UUIDs rendered as ISO strings)."""
     import json
 
     def default(o):
@@ -36,3 +34,4 @@ def get(mapping, key):
         return mapping.get(key)
     except AttributeError:
         return None
+

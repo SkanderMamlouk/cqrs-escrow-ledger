@@ -1,9 +1,3 @@
-"""python manage.py reset_all --yes
-
-DANGER (demo only): deletes the event store AND the read database, then
-recreates empty tables.  Use it to restart the demo from zero.
-"""
-
 from pathlib import Path
 
 from django.conf import settings
@@ -51,3 +45,4 @@ class Command(BaseCommand):
                     conn.execute(f'CREATE DATABASE "{name}"')
         call_command("migrate", verbosity=0)
         self.stdout.write(self.style.SUCCESS("Event store and read model are now empty."))
+

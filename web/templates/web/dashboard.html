@@ -75,9 +75,9 @@ const d = {{ chart|safe }};
 new Chart(document.getElementById('volume'), {
   type: 'bar',
   data: { labels: d.labels, datasets: [
-    { label: 'Deposits', data: d.deposits, backgroundColor: '#0f9d8a' },
-    { label: 'Withdrawals', data: d.withdrawals, backgroundColor: '#e11d48' },
-    { label: 'Transfers', data: d.transfers, backgroundColor: '#1d4ed8' } ] },
+    { label: 'Deposits', data: d.deposits, backgroundColor: '#1f6b45' },
+    { label: 'Withdrawals', data: d.withdrawals, backgroundColor: '#a23b32' },
+    { label: 'Transfers', data: d.transfers, backgroundColor: '#2d4e7a' } ] },
   options: { responsive: true, plugins: { legend: { position: 'bottom' } },
     scales: { x: { stacked: false, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
               y: { type: 'logarithmic', title: { display: true, text: 'TND (log scale)' } } } }

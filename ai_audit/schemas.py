@@ -1,10 +1,3 @@
-"""
-The exact JSON shape the AI must answer with (Pydantic v2 schema).
-
-If the AI returns anything else - free text, a missing field, an event id
-in the wrong format - Pydantic rejects it before any other check runs.
-"""
-
 from __future__ import annotations
 
 from typing import Literal
@@ -35,9 +28,8 @@ class AuditReport(BaseModel):
     closing_balance_tnd: str = Field(pattern=r"^-?\d+\.\d{3}$")
 
 
-# Which event types may be cited for each category of finding
 CATEGORY_EVENT_TYPES: dict[str, set[str] | None] = {
-    "opening": None,  # any
+    "opening": None,
     "deposit": {"FundsDeposited", "AccountOpened"},
     "withdrawal": {"FundsWithdrawn"},
     "escrow": {"FundsReserved", "HoldReleased", "TransferSettled"},
@@ -47,3 +39,4 @@ CATEGORY_EVENT_TYPES: dict[str, set[str] | None] = {
     "balance": None,
     "risk": None,
 }
+

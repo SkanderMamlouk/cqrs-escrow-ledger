@@ -1,4 +1,3 @@
-# Optional: local AI for the audit assistant (recommended on a PC with an NVIDIA GPU / 16 GB RAM).
 $ollama = "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe"
 if (-not (Test-Path $ollama)) {
     $cmd = Get-Command ollama -ErrorAction SilentlyContinue

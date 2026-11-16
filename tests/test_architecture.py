@@ -1,5 +1,3 @@
-"""The business core (banking/) must stay pure Python: no Django import allowed."""
-
 import ast
 from pathlib import Path
 
@@ -18,3 +16,4 @@ def test_domain_layer_does_not_depend_on_django():
                 names = [node.module]
             offenders += [f"{file.name}: {n}" for n in names if n.split(".")[0] in ("django", "readmodel", "web")]
     assert offenders == []
+

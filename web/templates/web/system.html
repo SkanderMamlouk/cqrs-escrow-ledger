@@ -31,7 +31,7 @@
       <tr><td>Events processed</td><td>{{ checkpoint.events_processed|default:0 }}</td></tr>
     </tbody></table>
     <form method="post" class="mt">{% csrf_token %}<input type="hidden" name="action" value="rebuild">
-      <button class="btn ghost" onclick="return confirm('Delete every read-model table and rebuild it from the events?')">&#8635; Wipe &amp; rebuild read model from events</button></form>
+      <button class="btn ghost" onclick="return confirm('Delete every read-model table and rebuild it from the events?')">Wipe &amp; rebuild read model from events</button></form>
   </div>
   <div class="card">
     <h2>AI audit provider</h2>
@@ -47,11 +47,11 @@
 
 <div class="card mt">
   <div class="flex between"><h2>Verification gate</h2>
-    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="verify"><button class="btn accent">&#10003; Run verification gate now</button></form></div>
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="verify"><button class="btn accent">Run verification gate now</button></form></div>
   <p class="muted" style="font-size:12.5px">Same checks as <code>python manage.py verify_ledger</code> (run by the CI pipeline): contiguous versions, monotonic timestamps,
     snapshot == full replay, read model == event store, statement sums, non-negative balances, money conservation, projector at head.</p>
   {% if report %}
-    <div class="banner {% if report.passed %}ok{% else %}bad{% endif %}"><span class="big">{% if report.passed %}&#10003;{% else %}&#10007;{% endif %}</span>
+    <div class="banner {% if report.passed %}ok{% else %}bad{% endif %}"><span class="stamp">{% if report.passed %}PASSED{% else %}FAILED{% endif %}</span>
       <div><b>{% if report.passed %}PASSED{% else %}FAILED{% endif %}</b>: {{ report.checks|length }} checks on {{ report.accounts }} accounts / {{ report.events }} events</div></div>
     <div class="grid g2">{% for c in report.checks %}
       <div class="check {% if c.passed %}pass{% else %}fail{% endif %}"><span class="icon">{% if c.passed %}&#10003;{% else %}&#10007;{% endif %}</span>

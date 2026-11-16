@@ -1,19 +1,3 @@
-"""
-AI PROVIDERS - which language model writes the audit summary?
-=============================================================
-
-AI_PROVIDER in the .env file chooses:
-
-  auto           (default) use Ollama if it is running on this PC with the
-                 configured model, otherwise Gemini if GEMINI_API_KEY is set,
-                 otherwise the deterministic template.
-  ollama         local model through Ollama (free, offline, uses your GPU)
-  gemini         Google Gemini API (free tier, needs internet + API key)
-  deterministic  no AI at all: a template built directly from the evidence
-
-Whatever the provider, its answer goes through the same verifier.
-"""
-
 from __future__ import annotations
 
 import json
@@ -54,7 +38,7 @@ class OllamaProvider:
         body = {
             "model": self.model,
             "stream": False,
-            "format": AuditReport.model_json_schema(),  # structured output: JSON forced by schema
+            "format": AuditReport.model_json_schema(),
             "options": {"temperature": 0, "num_ctx": 16384},
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
         }
@@ -111,3 +95,4 @@ def describe_provider() -> dict:
 
 def to_json(obj) -> str:
     return json.dumps(obj, indent=1, ensure_ascii=False)
+

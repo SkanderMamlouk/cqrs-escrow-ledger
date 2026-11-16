@@ -1,5 +1,3 @@
-"""Step 1 - the aggregate alone (pure Python, no database, no Django)."""
-
 import pytest
 
 from banking.domain import BankAccount, event_ref, event_type_name, signed_amount
@@ -48,7 +46,7 @@ def test_escrow_hold_reduces_available_but_not_balance():
     hold = a.reserve_funds(600_000, "beneficiary", "escrow")
     assert a.balance == 1000_000 and a.held == 600_000 and a.available == 400_000
     with pytest.raises(InsufficientFunds):
-        a.withdraw(500_000)  # money is blocked
+        a.withdraw(500_000)
     a.release_hold(hold)
     assert a.available == 1000_000
 
@@ -91,3 +89,4 @@ def test_state_is_a_left_fold_over_events():
 
 def test_event_ref_format():
     assert event_ref("7f3a9c21-aaaa-bbbb-cccc-000000000000", 7) == "EVT-7f3a9c21-0007"
+

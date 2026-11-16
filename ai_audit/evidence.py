@@ -1,24 +1,3 @@
-"""
-EVIDENCE PACK - the only information the AI is allowed to use
-==============================================================
-
-Plain-language summary
-----------------------
-Before asking the AI anything, we compute - with ordinary deterministic
-Python - an "evidence pack" straight from the immutable EVENT STORE (never
-from the read model, never from memory):
-
-  * the exact list of events in the chosen time window, each with its
-    immutable id (EVT-xxxxxxxx-0007), exact timestamp, amount and the
-    balance right after it (computed by left-fold replay);
-  * the official totals ("facts"): opening balance, closing balance,
-    total deposits, total fees, ...
-
-The AI only REWRITES these facts in readable English.  The verifier
-(ai_audit/verifier.py) then checks every citation and every number against
-this same pack.  Anything not in the pack is rejected.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -31,7 +10,6 @@ from banking.money import plain, to_millimes
 
 
 def iso(ts: datetime) -> str:
-    """Canonical timestamp format used in citations: 2026-10-28T13:45:00Z"""
     return ts.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
@@ -112,7 +90,7 @@ def build_evidence(app: Any, account_id: UUID, start: datetime | None = None, en
             "event_id": event_ref(account_id, e.originator_version),
             "timestamp": iso(e.timestamp),
             "type": name,
-            "category": category,  # hint for the AI (context engineering)
+            "category": category,
             "version": e.originator_version,
             "amount_tnd": plain(amount) if amount else None,
             "amount_millimes": amount,
@@ -133,7 +111,7 @@ def build_evidence(app: Any, account_id: UUID, start: datetime | None = None, en
         "event_count": str(len(window)),
         "material_threshold_tnd": plain(to_millimes(settings.ALERT_LARGE_TRANSFER_TND)),
         **{f"total_{k}_tnd": plain(v) for k, v in totals.items()},
-        **{f"count_{k}": str(v) for k, v in counts.items()},  # computed over the WHOLE window
+        **{f"count_{k}": str(v) for k, v in counts.items()},
     }
     truncated = max(0, len(window) - max_events)
     if truncated:
@@ -143,3 +121,4 @@ def build_evidence(app: Any, account_id: UUID, start: datetime | None = None, en
         currency=account.currency, window_start=iso(start) if start else None,
         window_end=iso(end) if end else None, events=window, facts=facts, truncated=truncated,
     )
+

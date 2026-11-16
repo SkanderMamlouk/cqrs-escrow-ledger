@@ -1,19 +1,3 @@
-"""
-Command input validation with Pydantic v2
-=========================================
-
-Anything typed by a user in a web form is UNTRUSTED.  Before a command even
-reaches the aggregate, Pydantic checks its shape:  is the amount a positive
-number with at most 3 decimals?  Is the account type one of the allowed
-values?  Is the reference not too long?  If not, Pydantic raises a clear
-ValidationError and nothing happens.
-
-Two layers of protection:
-    Pydantic (here)       -> "is the input well-formed?"
-    Aggregate (domain.py) -> "is it allowed by the business rules?"
-                             (e.g. enough available funds)
-"""
-
 from __future__ import annotations
 
 from decimal import Decimal
@@ -96,3 +80,4 @@ class ReverseFee(_Command):
         if len(v) < 3:
             raise ValueError("A fee reversal needs a justification (min 3 characters).")
         return v
+

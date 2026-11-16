@@ -1,5 +1,3 @@
-# Automatic verification gate: runs on every push / pull request.
-# If any test or any ledger consistency check fails, the commit is marked red.
 name: CI - tests & ledger verification gate
 
 on:

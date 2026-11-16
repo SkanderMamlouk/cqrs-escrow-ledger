@@ -1,9 +1,3 @@
-"""python manage.py verify_ledger [--catch-up] [--json PATH]
-
-Deterministic verification gate (see readmodel/verification.py).
-Exit code 0 = everything consistent, 1 = at least one check failed.
-"""
-
 import json
 import sys
 from pathlib import Path
@@ -40,3 +34,4 @@ class Command(BaseCommand):
         else:
             self.stdout.write(self.style.ERROR(f"VERIFICATION GATE: FAILED - {summary}"))
             sys.exit(1)
+

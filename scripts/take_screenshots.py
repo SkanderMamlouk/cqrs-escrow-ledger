@@ -1,16 +1,3 @@
-"""
-Takes the high-resolution screenshots of the running application (for the slides / ZIP).
-
-Usage (the app must be running: START.bat or docker compose up), ideally right
-after RESET_DEMO.bat so that the audit views show the clean 98-event demo:
-    pip install playwright && python -m playwright install chromium
-    python scripts/take_screenshots.py [--base http://127.0.0.1:8000] [--skip-ai]
-
-It really USES the application (deposit, race demo, verification, AI audit),
-so every screenshot shows genuine behaviour - nothing is mocked.
-Order: 1) audit views of the clean demo  2) AI audit  3) live commands  4) system.
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -40,8 +27,6 @@ def main() -> None:
             page.screenshot(path=str(OUT / f"{name}.png"), full_page=full)
             print("saved", name)
 
-        # Let the system settle first: the projector must have delivered the
-        # webhook alerts of the demo data (status DELIVERED, inbox filled).
         for _ in range(90):
             page.goto(base + "/alerts/")
             if "HMAC valid" in page.content() and "PENDING" not in page.content():
@@ -60,7 +45,6 @@ def main() -> None:
         cafe = account_url("Cafe El Medina")
         karim = account_url("Karim Ben Salah")
 
-        # ---- 1) audit views of the clean demo ------------------------------
         page.goto(yasmine)
         shot("02_account_before_command")
         page.goto(yasmine.rstrip("/") + "/replay/?step=6")
@@ -81,7 +65,6 @@ def main() -> None:
         page.goto(karim)
         shot("11_account_karim_legacy_upcast")
 
-        # ---- 2) AI audit on the clean demo ----------------------------------
         if not args.skip_ai:
             page.goto(yasmine.rstrip("/") + "/audit/")
             shot("15_ai_audit_form", full=False)
@@ -91,7 +74,6 @@ def main() -> None:
             shot("16_ai_audit_report_verification")
             page.set_default_timeout(30_000)
 
-        # ---- 3) live commands (append real events) --------------------------
         page.goto(yasmine)
         form = page.locator("form[action$='/command/deposit/']")
         form.locator("input[name=amount]").fill("50")
@@ -100,7 +82,6 @@ def main() -> None:
         form.locator("button").click()
         page.wait_for_selector("text=Eventual consistency")
         shot("03_command_appended_event_and_lag", full=False)
-        # remember what was really observed, so the slides quote the exact same values
         info = page.locator(".messages").inner_text()
         lag = re.search(r"updated (\d+) ms after the write", info)
         evt = re.search(r"Event appended: (EVT-[0-9a-f]{8}-\d{4}) - FundsDeposited \(v(\d+), global position #(\d+)\)", info)
@@ -121,7 +102,6 @@ def main() -> None:
         page.wait_for_selector("text=Concurrency conflict")
         shot("05_stale_version_conflict", full=False)
 
-        # ---- 4) webhooks + system --------------------------------------------
         time.sleep(2)
         page.goto(base + "/alerts/")
         shot("12_webhook_alerts_outbox_inbox")
@@ -134,6 +114,9 @@ def main() -> None:
         page.locator("button:has-text('Wipe')").click()
         page.wait_for_selector("text=rebuilt from")
         shot("14_read_model_rebuilt_from_events", full=False)
+        rebuilt = re.search(r"rebuilt from (\d+) events in (\d+) ms", page.locator(".messages").inner_text())
+        facts["rebuild_events"] = int(rebuilt.group(1)) if rebuilt else None
+        facts["rebuild_ms"] = int(rebuilt.group(2)) if rebuilt else None
 
         page.goto(base + "/")
         shot("17_dashboard_after_demo")
@@ -146,3 +129,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

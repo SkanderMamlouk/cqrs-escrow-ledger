@@ -1,19 +1,3 @@
-"""
-THE AI AUDIT ASSISTANT - orchestration (Step 4 of the PDF)
-==========================================================
-
-    evidence pack  ->  AI writes JSON  ->  deterministic verifier
-                                  ^               |
-                                  |  rejected     |
-                                  +-- feedback ---+   (max AI_MAX_ATTEMPTS)
-                                                  |
-                       all attempts rejected      v   passed
-                  deterministic template  ---->  VERIFIED report shown + saved
-
-Every run (prompt, raw AI answers, every verification result) is stored in
-the AuditRun table, so the audit of the auditor is itself auditable.
-"""
-
 from __future__ import annotations
 
 import json
@@ -32,7 +16,7 @@ from ai_audit.verifier import Verification, material_events, verify
 
 
 class EmptyWindow(ValueError):
-    """The chosen time window contains no event: nothing to audit."""
+    pass
 
 
 SYSTEM_PROMPT = """You are a meticulous bank audit assistant for an event-sourced core banking ledger.
@@ -72,11 +56,6 @@ def _chunks(items: list, size: int = 15) -> list[list]:
 
 
 def deterministic_report(evidence: Evidence) -> dict[str, Any]:
-    """Template report computed directly from the evidence (passes the verifier by construction).
-
-    It never copies free text (reasons, references typed by users) and every
-    number it writes is a fact, a count, a cited amount or a sum of cited amounts.
-    """
     evs, facts = evidence.events, evidence.facts
     if not evs:
         raise EmptyWindow("No event in this time window.")
@@ -97,7 +76,6 @@ def deterministic_report(evidence: Evidence) -> dict[str, Any]:
                "statement": f"Closing balance {facts['closing_balance_tnd']} TND with "
                             f"{facts['closing_available_tnd']} TND available."}
 
-    # REQUIRED findings: they cover every material event (check 7)
     required: list[dict] = []
     for chunk in _chunks(of("FeeReversed")):
         total = sum(e["amount_millimes"] for e in chunk) / 1000
@@ -112,7 +90,6 @@ def deterministic_report(evidence: Evidence) -> dict[str, Any]:
                              "statement": f"{len(chunk)} material movement(s) of at least {threshold} TND "
                                           "require four-eyes review."})
 
-    # OPTIONAL findings: added while there is room (max 12 findings)
     optional: list[dict] = []
     dep = of("FundsDeposited")
     if dep:
@@ -170,7 +147,7 @@ def run_audit(app: Any, account_id: UUID, start: datetime | None = None, end: da
                 raw = provider.generate(SYSTEM_PROMPT, _user_prompt(evidence, feedback))
                 result = verify(raw, evidence)
                 error = ""
-            except Exception as exc:  # network error, timeout, quota...
+            except Exception as exc:
                 raw, result, error = "", None, f"{type(exc).__name__}: {exc}"[:300]
             attempts.append({"attempt": n, "provider": provider.name, "model": provider.model,
                              "latency_ms": round((time.perf_counter() - t0) * 1000),
@@ -187,7 +164,7 @@ def run_audit(app: Any, account_id: UUID, start: datetime | None = None, end: da
         attempts.append({"attempt": len(attempts) + 1, "provider": "deterministic", "model": "template",
                          "latency_ms": 0, "raw": json.dumps(report), "error": "",
                          "verification": final.as_dict()})
-        if not final.passed:  # should never happen: the template is built from the evidence
+        if not final.passed:
             status = "REJECTED"
 
     report_obj: AuditReport | None = final.report
@@ -206,3 +183,4 @@ def run_audit(app: Any, account_id: UUID, start: datetime | None = None, end: da
 
 
 __all__ = ["run_audit", "deterministic_report", "SYSTEM_PROMPT", "EmptyWindow"]
+

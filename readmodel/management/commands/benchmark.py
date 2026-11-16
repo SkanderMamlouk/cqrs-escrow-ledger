@@ -1,21 +1,3 @@
-"""python manage.py benchmark [--lag] [--quick]
-
-REAL measurements on YOUR machine (nothing is invented - "zero falsification").
-Results go to benchmarks/results/benchmark_<db mode>.json and PNG charts.
-
-B1  Aggregate reconstruction time vs stream length (150 / 550 / 1050 / 2550):
-    full left-fold replay  vs  snapshot (every 100 events) + replay of the 50 delta events
-B2  Write throughput: events appended per second (optimistic concurrency on)
-B3  Query latency on the demo bank: read model SELECT vs replaying the streams
-B4  (--lag) Eventual-consistency lag: time between the write and the moment
-    the asynchronous projector makes it visible in the read model.
-    NOTE: B4 adds a "Benchmark probe" account to the demo data; run
-    `python manage.py seed_demo --reset` afterwards for a clean demo.
-
-B1/B2 use a SEPARATE event store (tables benchledger_*), so the demo data
-is never touched by them.
-"""
-
 from __future__ import annotations
 
 import json
@@ -40,7 +22,7 @@ OUT = Path(settings.BASE_DIR) / "benchmarks" / "results"
 
 
 class BenchLedger(BankingApplication):
-    name = "BenchLedger"  # -> tables benchledger_events / benchledger_snapshots
+    name = "BenchLedger"
 
 
 def _ms(samples: list[float]) -> dict:
@@ -51,7 +33,7 @@ def _ms(samples: list[float]) -> dict:
 
 
 def _timeit(fn, runs: int) -> dict:
-    fn()  # warm-up run (connection pool, caches) - not counted
+    fn()
     samples = []
     for _ in range(runs):
         t0 = time.perf_counter()
@@ -66,6 +48,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--lag", action="store_true", help="Also measure projection lag (adds a probe account).")
         parser.add_argument("--quick", action="store_true", help="Smaller sizes (for CI).")
+        parser.add_argument("--charts-only", action="store_true",
+                            help="Redraw the PNG charts from the existing JSON results (no new measurement).")
 
     def _bench_env(self) -> dict:
         env = dict(settings.EVENTSTORE_ENV)
@@ -88,7 +72,11 @@ class Command(BaseCommand):
 
     def handle(self, *args, **opts):
         OUT.mkdir(parents=True, exist_ok=True)
-        # lengths are NOT multiples of 100, so every rebuild = snapshot + 50 delta events (realistic case)
+        if opts["charts_only"]:
+            path = OUT / f"benchmark_{settings.DB_MODE}.json"
+            self._charts(json.loads(path.read_text(encoding="utf-8")))
+            self.stdout.write(self.style.SUCCESS(f"Charts redrawn from {path}"))
+            return
         sizes = [150, 250, 550] if opts["quick"] else [150, 550, 1050, 2550]
         runs = 5 if opts["quick"] else 15
         results: dict = {
@@ -98,7 +86,6 @@ class Command(BaseCommand):
             "db_mode": settings.DB_MODE, "event_store": settings.EVENTSTORE_ENV["PERSISTENCE_MODULE"],
         }
 
-        # ---------------- B1 + B2 --------------------------------------
         self.stdout.write("B1/B2: building streams in a separate benchmark event store...")
         bench = BenchLedger(env=self._bench_env())
         b1, b2 = [], []
@@ -122,7 +109,6 @@ class Command(BaseCommand):
         results["B1_reconstruction"] = b1
         results["B2_write_throughput"] = b2
 
-        # ---------------- B3 -------------------------------------------
         app = get_app()
         ids = app.iter_account_ids()
         if ids:
@@ -146,7 +132,6 @@ class Command(BaseCommand):
                 if isinstance(v, dict):
                     self.stdout.write(f"  {k:<36} median {v['median_ms']:>8.3f} ms  p95 {v['p95_ms']:>8.3f} ms")
 
-        # ---------------- B4 -------------------------------------------
         if opts["lag"]:
             self.stdout.write("B4: eventual-consistency lag with the projector running in background...")
             stop = threading.Event()
@@ -192,9 +177,9 @@ class Command(BaseCommand):
         b1 = r["B1_reconstruction"]
         x = [row["stream_length"] for row in b1]
         fig, ax = plt.subplots(figsize=(7.5, 4.2), dpi=200)
-        ax.plot(x, [row["full_replay"]["median_ms"] for row in b1], "o-", color="#c2410c", lw=2.2,
+        ax.plot(x, [row["full_replay"]["median_ms"] for row in b1], "o-", color="#9a4a2c", lw=2.2,
                 label="Full left-fold replay (all events)")
-        ax.plot(x, [row["snapshot_plus_delta"]["median_ms"] for row in b1], "s-", color="#0f9d8a", lw=2.2,
+        ax.plot(x, [row["snapshot_plus_delta"]["median_ms"] for row in b1], "s-", color="#8a6a35", lw=2.2,
                 label="Snapshot (every 100) + replay of the 50 delta events")
         ax.set_xlabel("Events in the account stream")
         ax.set_ylabel("Rebuild time - median (ms)")
@@ -212,7 +197,7 @@ class Command(BaseCommand):
             vals = [q["read_model_account_list"]["median_ms"], q["event_store_replay_with_snapshots"]["median_ms"],
                     q["event_store_full_replay"]["median_ms"]]
             fig, ax = plt.subplots(figsize=(7.5, 4.2), dpi=200)
-            bars = ax.bar(labels, vals, color=["#1d4ed8", "#0f9d8a", "#c2410c"])
+            bars = ax.bar(labels, vals, color=["#2d4e7a", "#8a6a35", "#9a4a2c"])
             for b, v in zip(bars, vals):
                 ax.annotate(f"{v:.2f} ms", (b.get_x() + b.get_width() / 2, v), ha="center", va="bottom", fontsize=9)
             ax.set_ylabel("Median latency (ms)")
@@ -222,3 +207,4 @@ class Command(BaseCommand):
             fig.tight_layout()
             fig.savefig(OUT / f"queries_{r['db_mode']}.png")
             plt.close(fig)
+

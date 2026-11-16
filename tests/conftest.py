@@ -1,9 +1,3 @@
-"""Shared pytest fixtures.
-
-`app` is a fresh BankingApplication using the in-memory event store
-("POPO" = Plain Old Python Objects): super fast, nothing written to disk.
-"""
-
 from datetime import datetime, timezone
 
 import pytest
@@ -20,7 +14,6 @@ def app():
 
 @pytest.fixture
 def ledger_app(app, db):
-    """Same in-memory app, installed as THE app used by Django views/projector."""
     from config import ledger
 
     ledger.set_app(app)
@@ -34,3 +27,4 @@ def two_accounts(app):
         alice = app.open_account("Alice Ben Ali", "CURRENT", initial_deposit=m("1000")).account_id
         bob = app.open_account("Bob Gharbi", "CURRENT", initial_deposit=m("200")).account_id
     return alice, bob
+

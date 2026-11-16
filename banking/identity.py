@@ -1,20 +1,10 @@
-"""
-Identifiers (account ids, HLD-/TRF-/FEE- references).
-
-Normally every new id is random (uuid4).  The demo-data generator wraps its
-work in `reproducible()`, which makes ids deterministic (uuid5 + a counter),
-so the demo bank has EXACTLY the same account ids and event ids
-(e.g. EVT-xxxxxxxx-0013) on every computer - the screenshots, slides and
-documentation therefore match what you see on screen.
-"""
-
 from __future__ import annotations
 
 import threading
 import uuid
 from contextlib import contextmanager
 
-_NAMESPACE = uuid.UUID("6f1d3a52-14de-4c0b-9b8e-2026d5114bb1")  # fixed namespace for Project 14
+_NAMESPACE = uuid.UUID("6f1d3a52-14de-4c0b-9b8e-2026d5114bb1")
 _local = threading.local()
 
 
@@ -38,3 +28,4 @@ def new_uuid() -> uuid.UUID:
 
 def new_hex8() -> str:
     return new_uuid().hex[:8]
+

@@ -1,11 +1,3 @@
-# docker compose up --build        ->  http://localhost:8000
-#
-#   db         PostgreSQL 16: event store (ledger_events) + read model (ledger_read)
-#   web        Django + gunicorn: migrations, demo seed, command handlers, pages
-#   projector  background worker: event log -> denormalized read tables + webhooks
-#
-# The AI assistant reaches Ollama running on the HOST PC (Windows app) through
-# host.docker.internal.  Put GEMINI_API_KEY in the .env file to enable Gemini.
 name: cqrs-ledger
 
 x-app: &app
@@ -42,7 +34,7 @@ services:
       POSTGRES_PASSWORD: ledger
       POSTGRES_DB: postgres
     ports:
-      - "5433:5432"   # optional: inspect with pgAdmin / psql on localhost:5433
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

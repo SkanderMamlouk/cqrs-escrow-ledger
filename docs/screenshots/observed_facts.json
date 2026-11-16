@@ -1,6 +1,8 @@
 {
-  "command_lag_ms": 260,
+  "command_lag_ms": 194,
   "command_event_id": "EVT-703c6537-0013",
   "command_version": 13,
-  "command_position": 99
+  "command_position": 99,
+  "rebuild_events": 100,
+  "rebuild_ms": 774
 }

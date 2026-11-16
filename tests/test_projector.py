@@ -1,5 +1,3 @@
-"""Step 2 - asynchronous read-model projector + Step 4 verification gate."""
-
 import pytest
 
 from banking.money import to_millimes as m
@@ -23,7 +21,7 @@ def make_history(app):
 
 def test_read_model_is_eventually_consistent(ledger_app):
     a, b = make_history(ledger_app)
-    assert AccountSummary.objects.count() == 0  # nothing projected yet
+    assert AccountSummary.objects.count() == 0
     assert projection_status(ledger_app)["lag_events"] > 0
     LedgerProjector(ledger_app).catch_up()
     row = AccountSummary.objects.get(account_id=a)
@@ -38,7 +36,7 @@ def test_projector_is_idempotent_and_resumes_from_checkpoint(ledger_app):
     p = LedgerProjector(ledger_app)
     first = p.catch_up()
     assert first == ledger_app.recorder.max_notification_id()
-    assert p.catch_up() == 0  # nothing applied twice
+    assert p.catch_up() == 0
     assert LedgerEntry.objects.count() == first
     assert ProjectionCheckpoint.objects.get().position == first
 
@@ -64,14 +62,15 @@ def test_alert_rules_fill_the_outbox_once(ledger_app):
     n = WebhookOutbox.objects.count()
     reset_read_model()
     p.catch_up()
-    assert WebhookOutbox.objects.count() == n  # rebuild never duplicates alerts
+    assert WebhookOutbox.objects.count() == n
 
 
 def test_verification_gate_passes_then_detects_tampering(ledger_app):
     a, _ = make_history(ledger_app)
     LedgerProjector(ledger_app).catch_up()
     assert verify(ledger_app).passed
-    AccountSummary.objects.filter(account_id=a).update(ledger_balance=1)  # corrupt the read model
+    AccountSummary.objects.filter(account_id=a).update(ledger_balance=1)
     report = verify(ledger_app)
     assert not report.passed
     assert any("read model == event store" in c.name and not c.passed for c in report.checks)
+

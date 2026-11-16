@@ -1,21 +1,3 @@
-"""
-WEB LAYER - Django views (HTMX + Chart.js on the front end)
-===========================================================
-
-Plain-language summary
-----------------------
-Look at which side each view uses - that IS the CQRS pattern:
-
-  QUERIES (GET pages)   -> read ONLY the read-model tables (readmodel.models)
-                           fast, simple SELECTs, no replay needed
-  COMMANDS (POST forms) -> go ONLY through the BankingApplication
-                           (banking.application), which appends events
-
-The audit pages (replay, time travel, event explorer, AI audit) are the
-exception on purpose: auditors want the SOURCE OF TRUTH, so they read the
-immutable event store directly.
-"""
-
 from __future__ import annotations
 
 import json
@@ -49,18 +31,11 @@ from readmodel.verification import verify as verify_ledger
 from readmodel.webhooks import verify_signature
 
 
-# ====================================================================== #
-# Helpers
-# ====================================================================== #
 def _pydantic_errors(exc: ValidationError) -> str:
     return "; ".join(f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors())
 
 
 def _wait_for_projection(account_id: UUID, version: int, timeout: float | None = None) -> float | None:
-    """Read-your-own-writes: wait until the read model shows `version`.
-
-    Returns the measured eventual-consistency lag in ms, or None on timeout.
-    """
     timeout = settings.READ_WAIT_SECONDS if timeout is None else timeout
     started = time.perf_counter()
     while time.perf_counter() - started < timeout:
@@ -85,9 +60,6 @@ def _after_command(request: HttpRequest, result) -> None:
             messages.info(request, f"Eventual consistency: read model updated {lag:.0f} ms after the write.")
 
 
-# ====================================================================== #
-# QUERY side pages (read model)
-# ====================================================================== #
 def dashboard(request: HttpRequest) -> HttpResponse:
     accounts = AccountSummary.objects.all()
     totals = accounts.aggregate(balance=Sum("ledger_balance"), held=Sum("held_amount"),
@@ -107,7 +79,6 @@ def dashboard(request: HttpRequest) -> HttpResponse:
 
 
 def recent_events(request: HttpRequest) -> HttpResponse:
-    """HTMX fragment refreshed every 2 s on the dashboard."""
     return render(request, "web/_recent.html", {
         "entries": LedgerEntry.objects.all()[:12], "status": projection_status(get_app()),
     })
@@ -144,9 +115,6 @@ def alerts(request: HttpRequest) -> HttpResponse:
     })
 
 
-# ====================================================================== #
-# COMMAND side (write model) - every POST appends events
-# ====================================================================== #
 @require_POST
 def open_account(request: HttpRequest) -> HttpResponse:
     try:
@@ -180,8 +148,8 @@ def account_command(request: HttpRequest, account_id: UUID, name: str) -> HttpRe
     model, handler = COMMANDS[name]
     data = {k: v for k, v in request.POST.items() if k != "csrfmiddlewaretoken" and v != ""}
     try:
-        command = model(**data)  # 1) Pydantic v2: is the input well-formed?
-        result = handler(get_app(), account_id, command)  # 2) aggregate: is it allowed?
+        command = model(**data)
+        result = handler(get_app(), account_id, command)
     except ValidationError as exc:
         messages.error(request, f"Invalid input - {_pydantic_errors(exc)}")
     except LedgerError as exc:
@@ -202,15 +170,11 @@ def race_demo(request: HttpRequest, account_id: UUID) -> HttpResponse:
     return redirect("account", account_id=account_id)
 
 
-# ====================================================================== #
-# AUDIT pages - read the immutable event store directly
-# ====================================================================== #
 def _parse_dt(value: str | None) -> datetime | None:
-    """Parse '2026-10-20T12:00' (Africa/Tunis) or a full ISO string. Raises ValueError if invalid."""
     if not value:
         return None
     value = value.strip()
-    if "T" in value and value[-6] == " ":  # '+01:00' arrived as ' 01:00' (unencoded '+' in a URL)
+    if "T" in value and value[-6] == " ":
         value = value[:-6] + "+" + value[-5:]
     dt = datetime.fromisoformat(value)
     return timezone.make_aware(dt) if timezone.is_naive(dt) else dt
@@ -255,7 +219,6 @@ def replay(request: HttpRequest, account_id: UUID) -> HttpResponse:
 
 
 def balance_at_api(request: HttpRequest, account_id: UUID) -> JsonResponse:
-    """GET /api/accounts/<id>/balance-at/?at=2026-10-01T12:00  (time-travel API)"""
     try:
         at = _parse_dt(request.GET.get("at")) or timezone.now()
     except ValueError:
@@ -276,12 +239,9 @@ def balance_at_api(request: HttpRequest, account_id: UUID) -> JsonResponse:
 
 
 def event_store(request: HttpRequest) -> HttpResponse:
-    """Raw view of the append-only event log (what is physically stored)."""
     app = get_app()
     head = app.recorder.max_notification_id() or 0
     per_page = 25
-    # positions can have gaps (a rejected concurrent insert consumes a number), so we
-    # read the log itself and page over the rows that really exist (newest first)
     log = list(reversed(app.recorder.select_notifications(start=1, limit=max(head, 1)))) if head else []
     pages = max(1, (len(log) + per_page - 1) // per_page)
     page = min(max(1, _int(request.GET.get("page"), 1)), pages)
@@ -293,7 +253,7 @@ def event_store(request: HttpRequest) -> HttpResponse:
                      "event_id": event_ref(n.originator_id, n.originator_version),
                      "topic": topic, "raw": raw,
                      "legacy": topic.endswith("FundsDeposited") and '"channel"' not in raw})
-    head = len(log)  # number of rows really stored
+    head = len(log)
     names = dict(AccountSummary.objects.values_list("account_id", "owner_name"))
     for r in rows:
         r["owner"] = names.get(UUID(r["stream"]), "")
@@ -331,9 +291,6 @@ def audit_run(request: HttpRequest, run_id: int) -> HttpResponse:
                                                   "attempts_json": json.dumps(run.attempts, indent=1)})
 
 
-# ====================================================================== #
-# System, webhooks, health
-# ====================================================================== #
 def system(request: HttpRequest) -> HttpResponse:
     app = get_app()
     report = None
@@ -360,7 +317,6 @@ def system(request: HttpRequest) -> HttpResponse:
 @csrf_exempt
 @require_POST
 def webhook_receive(request: HttpRequest) -> JsonResponse:
-    """Demo receiver: proves the HMAC signature and stores the alert."""
     valid = verify_signature(request.body, request.headers.get("X-Ledger-Signature", ""))
     try:
         payload = json.loads(request.body)
@@ -377,3 +333,4 @@ def health(request: HttpRequest) -> JsonResponse:
     status = projection_status(get_app())
     return JsonResponse({"status": "ok", "db_mode": settings.DB_MODE, **{k: v for k, v in status.items()
                                                                           if k != "updated_at"}})
+

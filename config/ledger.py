@@ -1,11 +1,3 @@
-"""
-One shared BankingApplication per process.
-
-Building the application opens a connection pool to the event store, so we
-build it once ("lazily", on first use) and re-use it everywhere.
-Tests replace it with an in-memory version through `set_app()`.
-"""
-
 from __future__ import annotations
 
 import threading
@@ -30,3 +22,4 @@ def get_app() -> BankingApplication:
 def set_app(app: BankingApplication | None) -> None:
     global _app
     _app = app
+

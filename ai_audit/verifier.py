@@ -1,37 +1,3 @@
-"""
-THE AI VERIFICATION GATE - deterministic, no AI involved
-========================================================
-
-Plain-language summary
-----------------------
-A language model can "hallucinate": invent an event, a date or an amount.
-In banking that is unacceptable.  So the AI's answer is never shown as-is.
-It must first pass ALL of these checks, computed with plain Python against
-the evidence pack (which itself comes from the immutable event store):
-
-  1. SCHEMA      the answer is valid JSON with exactly the expected fields
-                 (Pydantic v2 model ai_audit.schemas.AuditReport)
-  2. EXISTENCE   every cited event_id exists in this account's stream and
-                 inside the chosen time window; every reference written in
-                 the text (EVT-…, HLD-…, FEE-…, TRF-…) exists in the evidence
-  3. TIMESTAMP   every cited timestamp is EXACTLY the timestamp of that
-                 event; every date / time written in the text is the date /
-                 time of an event of the window
-  4. CATEGORY    a "fee" finding cites fee events, a "withdrawal" finding
-                 cites withdrawals, etc.
-  5. NUMBERS     EVERY number written in the headline and the statements
-                 (any format: "1,500.000 TND", "TND 1500", "-1500", "3 fees")
-                 must equal an amount / balance of a cited event, a sum of
-                 cited events, an official total or count from the evidence
-  6. BALANCE     the closing balance equals the deterministic left-fold result
-  7. COVERAGE    material events (fee reversals, transfers and escrow holds at
-                 or above the large-amount threshold) are all cited
-
-If one check fails, the answer is REJECTED and the reasons are sent back
-to the AI for one more try; if it fails again, the system falls back to a
-deterministic template report.  Either way, what the user sees is verified.
-"""
-
 from __future__ import annotations
 
 import json
@@ -47,22 +13,21 @@ from pydantic import ValidationError
 from ai_audit.evidence import Evidence
 from ai_audit.schemas import CATEGORY_EVENT_TYPES, AuditReport
 
-TUNIS = timezone(timedelta(hours=1))  # Africa/Tunis (UTC+1, no DST)
+TUNIS = timezone(timedelta(hours=1))
 
 REF_RE = re.compile(r"\b(?:EVT|HLD|FEE|TRF)-[0-9A-Za-z]+(?:-[0-9A-Za-z]+)*\b")
-OTHER_REF_RE = re.compile(r"\b[A-Z]{1,5}-[0-9A-Za-z]+(?:-[0-9A-Za-z]+)*\b")  # e.g. INV-2026-0912, C-1182
+OTHER_REF_RE = re.compile(r"\b[A-Z]{1,5}-[0-9A-Za-z]+(?:-[0-9A-Za-z]+)*\b")
 ISO_RE = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?Z?)?\b")
 MONTHS = {m: i for i, names in enumerate(
     [("january", "jan"), ("february", "feb"), ("march", "mar"), ("april", "apr"), ("may",), ("june", "jun"),
      ("july", "jul"), ("august", "aug"), ("september", "sep", "sept"), ("october", "oct"),
      ("november", "nov"), ("december", "dec")], start=1) for m in names}
-del MONTHS["may"]  # "3 may require..." is not a date; May dates are then checked as plain numbers
+del MONTHS["may"]
 _M = "|".join(sorted(MONTHS, key=len, reverse=True))
 DAY_MONTH_RE = re.compile(rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\s+({_M})\.?(?:,?\s+(\d{{4}}))?\b", re.IGNORECASE)
 MONTH_DAY_RE = re.compile(rf"\b({_M})\.?\s+(\d{{1,2}})(?:st|nd|rd|th)?(?:,?\s+(\d{{4}}))?\b", re.IGNORECASE)
 TIME_RE = re.compile(r"\b(\d{1,2}):(\d{2})(?::\d{2})?\b")
 NUM_RE = re.compile(r"(?<![\w.])([-−]?)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d+))?(?![\w])")
-# kept for backward compatibility / tests
 AMOUNT_RE = re.compile(r"(?<![\w.])(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d+))?\s*(?:TND|DT|dinars?)\b", re.IGNORECASE)
 
 
@@ -100,7 +65,6 @@ def _dec(text: str | None) -> Decimal | None:
 
 
 def extract_amounts(statement: str) -> list[Decimal]:
-    """Amounts written as '<number> TND' (used by tests and the UI)."""
     out = []
     for whole, frac in AMOUNT_RE.findall(statement):
         d = _dec(whole.replace(",", "") + (f".{frac}" if frac else ""))
@@ -117,8 +81,6 @@ def _parse(raw: str) -> dict:
 
 
 class _Context:
-    """Everything the evidence allows the text to mention."""
-
     def __init__(self, evidence: Evidence) -> None:
         self.evidence = evidence
         self.facts_amounts = {_dec(v) for k, v in evidence.facts.items() if k.endswith("_tnd")}
@@ -147,13 +109,10 @@ class _Context:
 
 def _check_text(text: str, where: str, ctx: _Context, allowed_amounts: set, allowed_ints: set,
                 refs: list, dates: list, nums: list) -> None:
-    """Checks references, dates, times and numbers written in free text."""
-    # references
     for ref in set(REF_RE.findall(text)) | set(OTHER_REF_RE.findall(text)):
         if ref not in ctx.known_refs:
             refs.append(f"{where}: reference {ref} does not exist in the evidence")
     text = OTHER_REF_RE.sub(" ", REF_RE.sub(" ", text))
-    # ISO dates (and times)
     for m in ISO_RE.finditer(text):
         try:
             d = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
@@ -165,7 +124,6 @@ def _check_text(text: str, where: str, ctx: _Context, allowed_amounts: set, allo
         if m.group(4) and (int(m.group(4)), int(m.group(5))) not in ctx.times:
             dates.append(f"{where}: time {m.group(4)}:{m.group(5)} is not the time of any event")
     text = ISO_RE.sub(" ", text)
-    # dates written with month names
     for regex, day_i, month_i, year_i in ((DAY_MONTH_RE, 1, 2, 3), (MONTH_DAY_RE, 2, 1, 3)):
         for m in regex.finditer(text):
             day, month = int(m.group(day_i)), MONTHS[m.group(month_i).lower()]
@@ -179,12 +137,10 @@ def _check_text(text: str, where: str, ctx: _Context, allowed_amounts: set, allo
             if not ok:
                 dates.append(f"{where}: date '{m.group(0)}' is not the date of any event in the window")
         text = regex.sub(" ", text)
-    # times
     for m in TIME_RE.finditer(text):
         if (int(m.group(1)), int(m.group(2))) not in ctx.times:
             dates.append(f"{where}: time {m.group(0)} is not the time of any event")
     text = TIME_RE.sub(" ", text)
-    # every remaining number
     for sign, whole, frac in NUM_RE.findall(text):
         value = Decimal(whole.replace(",", "") + (f".{frac}" if frac else ""))
         if sign:
@@ -199,7 +155,6 @@ def _check_text(text: str, where: str, ctx: _Context, allowed_amounts: set, allo
 def verify(raw: str | dict, evidence: Evidence) -> Verification:
     checks: list[CheckResult] = []
 
-    # 1. SCHEMA -----------------------------------------------------------
     try:
         data = raw if isinstance(raw, dict) else _parse(raw)
         report = AuditReport.model_validate(data)
@@ -213,7 +168,6 @@ def verify(raw: str | dict, evidence: Evidence) -> Verification:
     exist, stamp, cat, nums = [], [], [], []
     cited_ids: set[str] = set()
 
-    # headline: only facts / event values / counts, no citations needed
     _check_text(report.headline, "headline", ctx, ctx.facts_amounts | ctx.all_event_amounts,
                 ctx.facts_ints | ctx.years, exist, stamp, nums)
 
@@ -238,7 +192,7 @@ def verify(raw: str | dict, evidence: Evidence) -> Verification:
             allowed_amounts |= {_dec(ev["amount_tnd"]), _dec(ev["balance_after_tnd"]), _dec(ev["available_after_tnd"]),
                                 _dec(str(Decimal(ev["signed_millimes"]) / 1000))}
         allowed_amounts.add(_dec(str(Decimal(sum(amounts)) / 1000)))
-        if len(amounts) <= 12:  # sums of subsets of cited events of the same type
+        if len(amounts) <= 12:
             by_type: dict[str, list[int]] = {}
             for ev in cited:
                 if ev["amount_millimes"]:
@@ -255,13 +209,11 @@ def verify(raw: str | dict, evidence: Evidence) -> Verification:
     checks.append(CheckResult("4. Finding category matches event types", not cat, cat))
     checks.append(CheckResult("5. Every number grounded in evidence", not nums, nums))
 
-    # 6. BALANCE -----------------------------------------------------------
     expected = evidence.facts["closing_balance_tnd"]
     ok = _dec(report.closing_balance_tnd) == _dec(expected)
     checks.append(CheckResult("6. Closing balance == deterministic left-fold", ok,
                               [] if ok else [f"AI said {report.closing_balance_tnd}, ledger says {expected}"]))
 
-    # 7. COVERAGE ----------------------------------------------------------
     threshold = _dec(evidence.facts.get("material_threshold_tnd", "10000"))
     missing = []
     for ev in material_events(evidence, threshold):
@@ -282,3 +234,4 @@ def material_events(evidence: Evidence, threshold: Decimal | None = None) -> lis
         if ev["type"] == "FeeReversed" or big:
             out.append(ev)
     return out
+

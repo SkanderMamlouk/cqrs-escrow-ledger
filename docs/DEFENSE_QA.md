@@ -59,7 +59,7 @@ a learning curve. It is worth it when auditability and history matter, as in ban
 It is the reference library given on the course sheet (official repository: https://github.com/pyeventsourcing/eventsourcing,
 documentation: https://eventsourcing.readthedocs.io/). We use version 9.5.6. It provides aggregates, the `@event` decorator,
 a PostgreSQL recorder with an ordered notification log, snapshots and upcasting. We followed the documentation sections for each
-feature (the links are in the code comments and in the README). We focused on the business domain, the projections and the verification.
+feature (the README lists, for each feature, the documentation section and the file that uses it). We focused on the business domain, the projections and the verification.
 
 **Q13. Where are the numbers in your slides from?**
 From `python manage.py benchmark --lag` (JSON in `benchmarks/results/`), measured on our team PC (Intel Core i5-13450HX, 16 GB RAM) on 10 Nov 2026.
@@ -74,6 +74,6 @@ Anyone can re-run it. Nothing is estimated or invented.
 We evaluated it. It stores the events through the Django ORM: you add `eventsourcing_django` to `INSTALLED_APPS`, run
 `migrate` and set `PERSISTENCE_MODULE=eventsourcing_django`. When we installed its latest version (0.6) on 15 Nov 2026,
 pip downgraded our library from 9.5.6 to 9.4.6, because the package requires `eventsourcing < 9.5`. All our tests and benchmarks
-were made with 9.5.6, so we kept the library's own PostgreSQL module (`eventsourcing.postgres`). The decision is written in
-`config/dbmode.py` and `requirements.txt`. Switching later would only change the configuration (`INSTALLED_APPS`, `migrate`,
+were made with 9.5.6, so we kept the library's own PostgreSQL module (`eventsourcing.postgres`). The decision is explained in
+the README (section "Official references from the course sheet"). Switching later would only change the configuration (`INSTALLED_APPS`, `migrate`,
 `PERSISTENCE_MODULE`): the domain code in `banking/` would stay the same.

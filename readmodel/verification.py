@@ -1,27 +1,3 @@
-"""
-THE DETERMINISTIC VERIFICATION GATE
-===================================
-
-Plain-language summary
-----------------------
-"Zero hallucination, zero falsification": this module PROVES, with simple
-arithmetic, that the whole system is consistent.  It is run by
-`python manage.py verify_ledger`, by the test-suite and by the GitHub CI.
-If a single check fails, the command exits with an error code (the CI turns
-red).
-
-Checks (per account and for the whole bank):
-  1. versions are contiguous 1, 2, 3, ... N (no gap, no duplicate)
-  2. timestamps never go backwards inside a stream
-  3. rebuilding WITH snapshots == rebuilding WITHOUT snapshots (pure left fold)
-  4. every stored snapshot == the replay at that exact version
-  5. read model (AccountSummary) == event-store state (balance, holds, version)
-  6. sum of statement lines (LedgerEntry) == ledger balance, one line per event
-  7. available balance is never negative
-  8. money conservation: total transfers OUT == total transfers IN
-  9. the projector checkpoint has reached the head of the event log
-"""
-
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
@@ -85,7 +61,7 @@ def verify(app: Any) -> VerificationReport:
 
         snap_ok = True
         for v in app.snapshot_versions(account_id):
-            replay_v = app.repository.get(account_id, version=v)  # uses that snapshot
+            replay_v = app.repository.get(account_id, version=v)
             from eventsourcing.application import project_aggregate
 
             pure_v = project_aggregate(None, app.events.get(account_id, lte=v))
@@ -121,3 +97,4 @@ def verify(app: Any) -> VerificationReport:
     report.add("projector checkpoint at head of event log", status["lag_events"] == 0,
                f"position {status['position']} / head {status['head']}")
     return report
+

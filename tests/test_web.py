@@ -1,5 +1,3 @@
-"""Web layer: commands through HTTP, Pydantic validation, concurrency, webhooks."""
-
 import json
 
 import pytest
@@ -82,4 +80,5 @@ def test_open_account_via_form(ledger_app):
     r = Client().post("/accounts/open/", {"owner_name": "New Customer", "account_type": "SAVINGS", "initial_deposit": "10"})
     assert r.status_code == 302
     assert len(ledger_app.iter_account_ids()) == 1
-    assert AccountSummary.objects.count() == 0  # read side updates only when the projector runs
+    assert AccountSummary.objects.count() == 0
+
