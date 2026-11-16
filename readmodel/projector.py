@@ -23,6 +23,13 @@ tables a few milliseconds LATER, the read side is "eventually consistent":
 for a very short moment the dashboard may show the previous balance.  The
 UI shows this lag live (dashboard -> "projection lag").
 
+Official references used in this file
+  * reading the ordered event log: https://eventsourcing.readthedocs.io/en/stable/topics/application.html#selecting-notifications-from-the-log
+  * the library also offers Projection / ProjectionRunner (https://eventsourcing.readthedocs.io/en/stable/topics/projection.html).
+    We wrote this small projector instead because our read model lives in
+    Django ORM tables, and the checkpoint must be saved in the SAME Django
+    transaction as those tables.
+
 Exactly-once guarantee: read rows + checkpoint are committed together.  If
 the projector crashes in the middle, the transaction is rolled back and the
 same events are processed again on restart - never skipped, never doubled.

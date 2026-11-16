@@ -1,7 +1,7 @@
 # Core Banking & Escrow Ledger: CQRS + Event Sourcing in Python & Django
 
 **DS1 Project 14**, *Command Query Responsibility Segregation (CQRS) & Event Sourcing in Python and Django*
-ISG Tunis · AI Engineering & Software Architecture · 2026–2027 · **Section BI1, Group 6**
+ISG Tunis · AI Engineering & Software Architecture · 2026-2027 · **Section BI1, Group 6**
 Team: **Arij Ben Brahim · Israa Keysi · Skander Mamlouk**
 
 In this banking ledger, nothing is ever overwritten. Every deposit, escrow hold, transfer, fee and
@@ -14,6 +14,18 @@ claim it cannot prove.
 
 > New to programming? Read [docs/GUIDE_FOR_BEGINNERS.md](docs/GUIDE_FOR_BEGINNERS.md) first.
 > It explains every concept and every folder in plain language.
+
+---
+
+## Official references from the course sheet
+
+The professor's reference links for subject 14 are used directly in the project:
+
+| Reference (course sheet) | Where we use it in this project |
+|---|---|
+| **eventsourcing library, official repository**: https://github.com/pyeventsourcing/eventsourcing | The whole write model is built on it (version 9.5.6, pinned in `requirements.txt`): the `BankAccount` aggregate with `@event` ([banking/domain.py](banking/domain.py)), the `Application`, repository, snapshots and notification log ([banking/application.py](banking/application.py)) and the PostgreSQL event store module `eventsourcing.postgres` ([config/dbmode.py](config/dbmode.py)). The link is also in the footer of every page of the web application and on the `/system/` page. |
+| **Documentation**: https://eventsourcing.readthedocs.io/ | Each feature we use points to the section of the documentation it follows, in the code comments: [event decorator](https://eventsourcing.readthedocs.io/en/stable/topics/domain.html#event-decorator), [timestamps](https://eventsourcing.readthedocs.io/en/stable/topics/domain.html#timestamp-timezones), [aggregate ids](https://eventsourcing.readthedocs.io/en/stable/topics/domain.html#defining-the-aggregate-id) and [versioning / upcasting](https://eventsourcing.readthedocs.io/en/stable/topics/domain.html#versioning) in `banking/domain.py`; [repository](https://eventsourcing.readthedocs.io/en/stable/topics/application.html#repository), [saving multiple aggregates](https://eventsourcing.readthedocs.io/en/stable/topics/application.html#saving-multiple-aggregates), [automatic snapshotting](https://eventsourcing.readthedocs.io/en/stable/topics/application.html#automatic-snapshotting) and [notification log](https://eventsourcing.readthedocs.io/en/stable/topics/application.html#notification-log) in `banking/application.py`; [selecting notifications](https://eventsourcing.readthedocs.io/en/stable/topics/application.html#selecting-notifications-from-the-log) and [projections](https://eventsourcing.readthedocs.io/en/stable/topics/projection.html) in `readmodel/projector.py`; [PostgreSQL environment](https://eventsourcing.readthedocs.io/en/stable/topics/persistence.html#postgres-environment) in `config/dbmode.py`. |
+| **Django package**: https://github.com/pyeventsourcing/eventsourcing-django | Evaluated on 15 Nov 2026 as the alternative way to store the events through the Django ORM (`PERSISTENCE_MODULE=eventsourcing_django`). Its latest version (0.6) requires `eventsourcing < 9.5`, while the project uses 9.5.6, so we keep the library's own PostgreSQL module. This decision is documented in `config/dbmode.py`, `requirements.txt` and [docs/DEFENSE_QA.md](docs/DEFENSE_QA.md) (Q15). |
 
 ---
 
@@ -41,7 +53,7 @@ claim it cannot prove.
 
 ### A. Windows without Docker (works on any PC, no admin rights)
 1. Install **Python 3.12** once: `winget install Python.Python.3.12`, or use python.org and tick *Add python.exe to PATH*.
-2. Double-click **`SETUP.bat`**. The first run takes 2–5 minutes. It creates `.venv`, installs the packages, starts an
+2. Double-click **`SETUP.bat`**. The first run takes 2 to 5 minutes. It creates `.venv`, installs the packages, starts an
    embedded **real PostgreSQL 16** (the `pgserver` package), creates the tables, loads the demo data and runs the verification gate.
 3. Double-click **`START.bat`**. A second window opens for the **projector worker**, and the browser opens
    **http://127.0.0.1:8000**.
@@ -77,6 +89,8 @@ python manage.py runserver          # terminal 2: http://127.0.0.1:8000
 | `sqlite` | two files `var/events.sqlite3` + `var/read.sqlite3` | last-resort fallback |
 
 Both stores are always separate databases: **`ledger_events`** (write side) and **`ledger_read`** (read side).
+The event store uses the library's own PostgreSQL module (`eventsourcing.postgres`). The official Django package
+[eventsourcing-django](https://github.com/pyeventsourcing/eventsourcing-django) was evaluated as an alternative (see above).
 
 ---
 
@@ -150,14 +164,14 @@ Python 3.12 and embedded PostgreSQL 16, on the clean demo data (6 accounts, 98 e
 Re-run the command on your own PC. The JSON file and the charts are rewritten in `benchmarks/results/`.
 Stream lengths are deliberately **not** multiples of the snapshot interval, so every snapshot rebuild also replays 50 delta events.
 
-| Measurement (median after warm-up; 15–40 runs) | Result |
+| Measurement (median after warm-up; 15 to 40 runs) | Result |
 |---|---|
 | Rebuild a 2,550-event account, full left-fold | 65.2 ms |
 | Same from the snapshot at v2,500 + 50 delta events | 1.94 ms (≈ 34× faster) |
 | Rebuild a 150-event account: full / snapshot + 50 delta | 4.1 ms / 1.71 ms |
 | "List all balances" (6 accounts, 98 events): read-model SELECT | 0.28 ms |
 | Same by replaying the streams: with snapshots / without | 2.72 ms / 4.26 ms |
-| Write throughput (load + decide + atomic append, one command at a time, 1 event each) | 351–403 commands/s |
+| Write throughput (load + decide + atomic append, one command at a time, 1 event each) | 351 to 403 commands/s |
 | Eventual-consistency lag (projector polls every 0.2 s, 40 probes) | median 204 ms · p95 207 ms |
 
 ## 8. Troubleshooting
@@ -169,7 +183,9 @@ Stream lengths are deliberately **not** multiples of the snapshot interval, so e
 * **Embedded PostgreSQL won't start** → delete the `var/` folder (it only holds local data), then run SETUP.bat again. You can also set `DB_MODE=sqlite`.
 
 ## 9. References
-* J. Bywater, *eventsourcing* Python library, v9.5.6 documentation (accessed Nov 2026): https://eventsourcing.readthedocs.io/
+* J. Bywater and contributors, *eventsourcing* Python library, v9.5.6, official repository (accessed Nov 2026): https://github.com/pyeventsourcing/eventsourcing
+* *eventsourcing* documentation, v9.5.6 (accessed Nov 2026): https://eventsourcing.readthedocs.io/
+* *eventsourcing-django*, Django ORM persistence for the eventsourcing library (accessed Nov 2026): https://github.com/pyeventsourcing/eventsourcing-django
 * M. Fowler, "Event Sourcing" (2005): https://martinfowler.com/eaaDev/EventSourcing.html
 * M. Fowler, "CQRS" (2011): https://martinfowler.com/bliki/CQRS.html
 * G. Young, "CQRS Documents" (2010): https://cqrs.files.wordpress.com/2010/11/cqrs_documents.pdf

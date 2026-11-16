@@ -18,6 +18,16 @@ DB_MODE (read from the environment / the .env file):
                           This is the default when you run without Docker.
     DB_MODE=sqlite     -> two simple SQLite files (last-resort fallback)
 
+Official references
+  * PERSISTENCE_MODULE / POSTGRES_* settings of the eventsourcing library:
+    https://eventsourcing.readthedocs.io/en/stable/topics/persistence.html#postgres-environment
+  * The official Django integration, eventsourcing-django
+    (https://github.com/pyeventsourcing/eventsourcing-django), stores the events
+    through the Django ORM with PERSISTENCE_MODULE=eventsourcing_django.
+    We evaluated it on 15 Nov 2026: its latest version (0.6) requires
+    eventsourcing < 9.5, while this project uses eventsourcing 9.5.6, so we
+    keep the library's own PostgreSQL module (eventsourcing.postgres).
+
 Whatever the mode, the result is always the same two dictionaries:
 
     EVENTSTORE_ENV  -> settings given to the `eventsourcing` library

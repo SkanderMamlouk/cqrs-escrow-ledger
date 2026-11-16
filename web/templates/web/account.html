@@ -110,7 +110,7 @@
       <td><span class="tag {{ e.event_type }}">{{ e.event_type }}</span></td>
       <td style="white-space:nowrap">{{ e.timestamp|date:"d M Y H:i" }}</td>
       <td>{{ e.description }}{% if e.counterparty_name %}<br><span class="muted">counterparty: {{ e.counterparty_name }}</span>{% endif %}</td>
-      <td class="num {% if e.amount > 0 %}pos{% elif e.amount < 0 %}neg{% endif %}">{% if e.amount %}{{ e.amount|tnd }}{% else %}&mdash;{% endif %}</td>
+      <td class="num {% if e.amount > 0 %}pos{% elif e.amount < 0 %}neg{% endif %}">{% if e.amount %}{{ e.amount|tnd }}{% else %}0.000{% endif %}</td>
       <td class="num"><b>{{ e.balance_after|tnd }}</b></td><td class="num">{{ e.available_after|tnd }}</td></tr>
     {% endfor %}</tbody></table></div>
 </div>

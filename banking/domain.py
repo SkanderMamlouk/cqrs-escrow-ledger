@@ -46,6 +46,15 @@ For every event there are two pieces:
 
 This file imports nothing from Django: the business core is pure Python
 (a test in tests/test_architecture.py makes sure it stays that way).
+
+Official references used in this file
+-------------------------------------
+* eventsourcing library (source code, v9.5.6): https://github.com/pyeventsourcing/eventsourcing
+* documentation: https://eventsourcing.readthedocs.io/
+    - aggregates and the @event decorator: https://eventsourcing.readthedocs.io/en/stable/topics/domain.html#event-decorator
+    - event timestamps (create_timestamp):  https://eventsourcing.readthedocs.io/en/stable/topics/domain.html#timestamp-timezones
+    - aggregate ids (create_id):            https://eventsourcing.readthedocs.io/en/stable/topics/domain.html#defining-the-aggregate-id
+    - class_version and upcasting:          https://eventsourcing.readthedocs.io/en/stable/topics/domain.html#versioning
 """
 
 from __future__ import annotations
@@ -82,11 +91,13 @@ class BankAccount(Aggregate):
     # Base class for all events of this aggregate.  It only changes where
     # the timestamp comes from (the business clock, see banking/clock.py).
     # ------------------------------------------------------------------ #
+    # Docs: https://eventsourcing.readthedocs.io/en/stable/topics/domain.html#timestamp-timezones
     class Event(Aggregate.Event):
         @staticmethod
         def create_timestamp():
             return clock.now()
 
+    # Docs: https://eventsourcing.readthedocs.io/en/stable/topics/domain.html#defining-the-aggregate-id
     @staticmethod
     def create_id(**_kwargs) -> UUID:
         """Stream id of a new account (random, or reproducible during seed_demo)."""
@@ -132,6 +143,7 @@ class BankAccount(Aggregate):
         channel: str  # added in schema version 2 (see upcast below)
 
         # --- Event schema UPCASTING ------------------------------------
+        # Docs: https://eventsourcing.readthedocs.io/en/stable/topics/domain.html#versioning
         # Version 1 of this event (old software) had no "channel" field.
         # Old events stay in the store untouched (they are immutable), but
         # when the library reads a v1 event it calls upcast_v1_v2() to

@@ -1,6 +1,6 @@
 {% load ledger_extras %}
 <div class="flex between">
-  <h2>State after <span class="mono">v{{ current.version }}</span> &mdash; {{ current.event_id }}</h2>
+  <h2>State after <span class="mono">v{{ current.version }}</span> ({{ current.event_id }})</h2>
   <div class="flex">
     {% if step > 1 %}<a class="btn ghost small" hx-get="?step={{ step|add:'-1' }}&fragment=state" hx-target="#state" href="?step={{ step|add:'-1' }}">&larr; Previous</a>{% endif %}
     {% if step < steps|length %}<a class="btn ghost small" hx-get="?step={{ step|add:'1' }}&fragment=state" hx-target="#state" href="?step={{ step|add:'1' }}">Next &rarr;</a>{% endif %}

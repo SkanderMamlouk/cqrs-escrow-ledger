@@ -40,6 +40,14 @@ def main() -> None:
             page.screenshot(path=str(OUT / f"{name}.png"), full_page=full)
             print("saved", name)
 
+        # Let the system settle first: the projector must have delivered the
+        # webhook alerts of the demo data (status DELIVERED, inbox filled).
+        for _ in range(90):
+            page.goto(base + "/alerts/")
+            if "HMAC valid" in page.content() and "PENDING" not in page.content():
+                break
+            page.wait_for_timeout(2000)
+
         page.goto(base + "/")
         page.wait_for_selector("text=Live event stream")
         shot("01_dashboard")

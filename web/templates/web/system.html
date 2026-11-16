@@ -11,7 +11,9 @@
     <h2>Infrastructure</h2>
     <table><tbody>
       <tr><td>DB mode</td><td><b>{{ db_mode }}</b></td></tr>
-      <tr><td>Event store module</td><td class="mono">{{ module }}</td></tr>
+      <tr><td>Event sourcing library</td><td><a href="https://github.com/pyeventsourcing/eventsourcing" target="_blank" rel="noopener">eventsourcing 9.5.6</a>
+        (<a href="https://eventsourcing.readthedocs.io/" target="_blank" rel="noopener">docs</a>)</td></tr>
+      <tr><td>Event store module</td><td class="mono"><a href="https://eventsourcing.readthedocs.io/en/stable/topics/persistence.html#postgres-module" target="_blank" rel="noopener">{{ module }}</a></td></tr>
       <tr><td>Snapshot interval</td><td>every {{ interval }} events</td></tr>
       <tr><td>Projector poll</td><td>{{ settings.PROJECTOR_POLL_SECONDS }} s</td></tr>
       <tr><td>Large transfer alert</td><td>&ge; {{ settings.ALERT_LARGE_TRANSFER_TND }} TND</td></tr>
@@ -25,7 +27,7 @@
       <tr><td>Checkpoint position</td><td class="mono">#{{ status.position }}</td></tr>
       <tr><td>Lag</td><td>{{ status.lag_events }} event{{ status.lag_events|pluralize }}
         {% if status.projector_stalled %}<span class="tag bad">projector not running?</span>{% else %}<span class="tag ok">healthy</span>{% endif %}</td></tr>
-      <tr><td>Last live lag</td><td>{% if status.last_lag_ms != None %}{{ status.last_lag_ms }} ms{% else %}&mdash;{% endif %}</td></tr>
+      <tr><td>Last live lag</td><td>{% if status.last_lag_ms != None %}{{ status.last_lag_ms }} ms{% else %}none yet{% endif %}</td></tr>
       <tr><td>Events processed</td><td>{{ checkpoint.events_processed|default:0 }}</td></tr>
     </tbody></table>
     <form method="post" class="mt">{% csrf_token %}<input type="hidden" name="action" value="rebuild">
@@ -50,7 +52,7 @@
     snapshot == full replay, read model == event store, statement sums, non-negative balances, money conservation, projector at head.</p>
   {% if report %}
     <div class="banner {% if report.passed %}ok{% else %}bad{% endif %}"><span class="big">{% if report.passed %}&#10003;{% else %}&#10007;{% endif %}</span>
-      <div><b>{% if report.passed %}PASSED{% else %}FAILED{% endif %}</b> &mdash; {{ report.checks|length }} checks on {{ report.accounts }} accounts / {{ report.events }} events</div></div>
+      <div><b>{% if report.passed %}PASSED{% else %}FAILED{% endif %}</b>: {{ report.checks|length }} checks on {{ report.accounts }} accounts / {{ report.events }} events</div></div>
     <div class="grid g2">{% for c in report.checks %}
       <div class="check {% if c.passed %}pass{% else %}fail{% endif %}"><span class="icon">{% if c.passed %}&#10003;{% else %}&#10007;{% endif %}</span>
         <div>{{ c.name }}{% if c.detail %}<br><span class="muted" style="font-size:12px">{{ c.detail }}</span>{% endif %}</div></div>{% endfor %}</div>

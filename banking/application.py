@@ -27,6 +27,14 @@ which gives us for free:
     * self.recorder.select_notifications(...) -> the global, ordered log of
       all events, used by the read-model projector.
 
+Official references used in this file
+  * eventsourcing library (v9.5.6): https://github.com/pyeventsourcing/eventsourcing
+  * Application and repository:     https://eventsourcing.readthedocs.io/en/stable/topics/application.html#repository
+  * saving several aggregates in one transaction (transfers):
+                                    https://eventsourcing.readthedocs.io/en/stable/topics/application.html#saving-multiple-aggregates
+  * automatic snapshotting:          https://eventsourcing.readthedocs.io/en/stable/topics/application.html#automatic-snapshotting
+  * notification log:                https://eventsourcing.readthedocs.io/en/stable/topics/application.html#notification-log
+
 Snapshots: every SNAPSHOT_INTERVAL events (default 5), the library stores a
 copy of the account state.  Rebuilding then starts from the most recent
 snapshot and only replays the events after it ("snapshot + delta replay").

@@ -2,7 +2,7 @@
 {% block title %}Event store{% endblock %}
 {% block content %}
 <div class="page-head">
-  <div><h1>Event store &mdash; the append-only log</h1>
+  <div><h1>Event store: the append-only log</h1>
     <p class="sub">Exactly what is physically stored by <code>{{ module }}</code>: {{ head }} immutable rows, never updated, never deleted.
       Primary key = (stream id, version) &rArr; optimistic concurrency. <span class="tag warn">schema v1</span> rows are upcast to v2 when read.</p></div>
   <div class="flex">{% if page > 1 %}<a class="btn ghost small" href="?page={{ page|add:'-1' }}">&larr; Newer</a>{% endif %}

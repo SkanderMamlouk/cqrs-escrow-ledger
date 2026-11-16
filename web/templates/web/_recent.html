@@ -6,7 +6,7 @@
   <tr><td style="width:46px" class="mono muted">#{{ e.position }}</td>
     <td><span class="tag {{ e.event_type }}">{{ e.event_type }}</span><br>
       <span style="font-size:12.5px">{{ e.owner_name }}</span></td>
-    <td class="num {% if e.amount > 0 %}pos{% elif e.amount < 0 %}neg{% endif %}">{% if e.amount %}{{ e.amount|tnd }}{% else %}&mdash;{% endif %}<br>
+    <td class="num {% if e.amount > 0 %}pos{% elif e.amount < 0 %}neg{% endif %}">{% if e.amount %}{{ e.amount|tnd }}{% else %}0.000{% endif %}<br>
       <span class="muted" style="font-size:11.5px">{{ e.timestamp|date:"d M H:i" }}</span></td></tr>
   {% empty %}<tr><td class="muted">No events projected yet.</td></tr>{% endfor %}</tbody>
 </table>

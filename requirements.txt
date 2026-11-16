@@ -1,6 +1,9 @@
 # Core stack required by the DS1 subject (Project 14)
 Django==5.2.19
 eventsourcing[postgres]==9.5.6      # event store, aggregates, snapshots, notification log
+                                    # source: https://github.com/pyeventsourcing/eventsourcing
+                                    # docs:   https://eventsourcing.readthedocs.io/
+                                    # (eventsourcing-django 0.6 requires eventsourcing < 9.5, so it is not installed)
 psycopg[binary,pool]==3.3.8         # PostgreSQL driver used by eventsourcing 9.x and by Django
 psycopg2-binary==2.9.13             # driver named in the course PDF install command (kept for compatibility)
 pydantic==2.14.3                    # command validation + AI output schema (Pydantic v2)

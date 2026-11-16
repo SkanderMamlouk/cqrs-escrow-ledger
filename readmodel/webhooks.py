@@ -16,7 +16,8 @@ visible on the "Alerts" page; you could also point it to n8n, Slack, Teams..).
 * Each request is SIGNED with HMAC-SHA256 using WEBHOOK_SECRET, so the
   receiver can prove the alert really comes from our ledger.
 * If the receiver is down, we retry later with exponential back-off
-  (2, 4, 8, 16, 32 s); after 6 failed attempts the alert is marked FAILED.
+  (2, 4, 8, 16, 32 s, then every 60 s); after 10 failed attempts (about 6 minutes)
+  the alert is marked FAILED.
 """
 
 from __future__ import annotations
@@ -34,7 +35,8 @@ from django.utils import timezone
 from readmodel.models import WebhookOutbox
 
 log = logging.getLogger("ledger.webhooks")
-MAX_ATTEMPTS = 6
+MAX_ATTEMPTS = 10
+MAX_BACKOFF_SECONDS = 60
 
 
 def sign(body: bytes, secret: str | None = None) -> str:
@@ -77,7 +79,7 @@ def deliver_pending(limit: int = 5) -> int:
             if alert.attempts >= MAX_ATTEMPTS:
                 alert.status = "FAILED"
             else:
-                alert.next_attempt_at = timezone.now() + timedelta(seconds=2 ** alert.attempts)
+                alert.next_attempt_at = timezone.now() + timedelta(seconds=min(2 ** alert.attempts, MAX_BACKOFF_SECONDS))
         alert.save()
     if delivered:
         log.info("Delivered %d webhook alert(s)", delivered)

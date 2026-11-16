@@ -44,7 +44,7 @@ flowchart LR
   class v5,v10 snap
   class v11,v12,v13 delta
 ```
-To rebuild v13, the repository loads snapshot v10 (1 read) and replays only v11–v13, instead of all 13 events.
+To rebuild v13, the repository loads snapshot v10 (1 read) and replays only v11 to v13, instead of all 13 events.
 
 ## 3. Sequence: one deposit command, end to end
 
@@ -74,3 +74,8 @@ sequenceDiagram
   W->>R: wait until last_version >= 13 (read-your-writes)
   W-->>U: redirect + "read model updated ~200 ms after the write"
 ```
+
+## References used for these diagrams
+* eventsourcing library (v9.5.6): https://github.com/pyeventsourcing/eventsourcing
+* documentation: https://eventsourcing.readthedocs.io/ (topics: domain, application, persistence, projection)
+* Django persistence package evaluated as an alternative: https://github.com/pyeventsourcing/eventsourcing-django

@@ -55,7 +55,7 @@ Keeping writing and reading separate like this is called **CQRS**.
 | **HMAC signature** | signature HMAC | A secret stamp proving the message really comes from our bank | `X-Ledger-Signature` |
 | **AI audit assistant** | assistant d'audit IA | An intern who writes a report from the notebook | `/accounts/<id>/audit/` |
 | **Deterministic verifier** | vérificateur déterministe | The chief accountant who checks **every** line number, date and amount in the intern's report before signing it | `ai_audit/verifier.py` (7 checks) |
-| **Hallucination** | hallucination | The intern invents a date or an amount that is not in the notebook | caught by checks 2–6 |
+| **Hallucination** | hallucination | The intern invents a date or an amount that is not in the notebook | caught by checks 2 to 6 |
 
 ---
 
@@ -139,11 +139,27 @@ cqrs_ledger/
 
 ---
 
+## Part 4b: The library we build on (the professor's reference links)
+
+We did not write the event store ourselves. We use the **eventsourcing** library, the reference given on
+the course sheet for subject 14:
+
+| Link | What it is | What we take from it |
+|---|---|---|
+| https://github.com/pyeventsourcing/eventsourcing | the source code of the library (version 9.5.6 in our project) | the `Aggregate` class, the `@event` decorator, the `Application` class, snapshots and the PostgreSQL event store |
+| https://eventsourcing.readthedocs.io/ | its official documentation | we followed one section per feature: aggregates and `@event`, versioning (upcasting), repository, snapshots, notification log. Each link is written next to the code that uses it |
+| https://github.com/pyeventsourcing/eventsourcing-django | an extra package that saves the events through Django's own database layer | we tested it, but its latest version needs an older version of the library (below 9.5). We kept our version 9.5.6 and explained why (see DEFENSE_QA.md, Q15) |
+
+In one sentence for the jury: *"The library gives us the notebook (event store, aggregates, snapshots);
+we wrote the bank rules, the summary board (projector), the verification gate and the web screens."*
+
+---
+
 ## Part 5: How to run it (step by step)
 
 **On any Windows PC (no Docker):**
 1. Install Python 3.12 (only once): open *PowerShell* and type `winget install Python.Python.3.12`.
-2. Double-click **SETUP.bat** and wait until "SETUP COMPLETE" (2–5 minutes the first time).
+2. Double-click **SETUP.bat** and wait until "SETUP COMPLETE" (2 to 5 minutes the first time).
 3. Double-click **START.bat**. Two black windows appear: the web server and the projector.
    **Keep both open.** The browser opens by itself at http://127.0.0.1:8000.
 4. To stop, close both black windows.

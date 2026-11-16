@@ -3,7 +3,7 @@
 {% block content %}
 <div class="page-head">
   <div>
-    <h1>Temporal replay audit &mdash; {{ owner }}</h1>
+    <h1>Temporal replay audit: {{ owner }}</h1>
     <p class="sub">Read directly from the <span class="side store">event store</span>. State is rebuilt as a
       <b>left-fold</b>: <code>state<sub>n</sub> = apply(state<sub>n-1</sub>, event<sub>n</sub>)</code>.
       A snapshot is stored every <b>{{ interval }}</b> events.</p>
