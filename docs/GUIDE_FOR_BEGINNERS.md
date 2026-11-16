@@ -2,6 +2,7 @@
 
 This guide assumes **zero programming knowledge**. Read it in order. After it you will be able to
 explain every slide and every screen, and answer the professor's questions.
+When you want to understand the code itself, continue with [CODE_GUIDE.md](CODE_GUIDE.md): it explains every file and function.
 
 ---
 
@@ -162,7 +163,8 @@ we wrote the bank rules, the summary board (projector), the verification gate an
 2. Double-click **SETUP.bat** and wait until "SETUP COMPLETE" (2 to 5 minutes the first time).
 3. Double-click **START.bat**. Two black windows appear: the web server and the projector.
    **Keep both open.** The browser opens by itself at http://127.0.0.1:8000.
-4. To stop, close both black windows.
+4. To stop: click in the web server window and press **Ctrl+C**, then close the projector window.
+   (Closing the windows with the X while the database is running can force a slow recovery at the next start.)
 
 **On the RTX PC with Docker:** start Docker Desktop, then double-click **START_DOCKER.bat**.
 
@@ -195,3 +197,20 @@ we wrote the bank rules, the summary board (projector), the verification gate an
 3. "Two writers cannot both create the same version: the unique (stream, version) key gives us optimistic concurrency."
 4. "Reads come from separate denormalized tables built asynchronously by a projector, so the read side is eventually consistent (≈ 0.2 s)."
 5. "The AI never has the last word. A deterministic verifier checks every event id, timestamp and amount against the event store."
+
+---
+
+## Part 8: Working in VS Code
+
+* Open the folder `PROJET SOA 1` (File > Open Folder). The project code is in `cqrs_ledger`.
+* **Colours of the file names** in the Explorer on the left:
+  * **yellow / orange with an M**: the file was changed since the last Git save (commit). It disappears after a commit.
+  * **green with a U**: a new file that Git does not track yet.
+  * **grey**: a file Git ignores on purpose (`.venv`, `var`, `.env`). This is normal.
+  * **yellow without a letter, with a number**: VS Code found a **warning** inside (see the Problems panel, Ctrl+Shift+M).
+    The usual one is `Import "django..." could not be resolved`: VS Code is looking at the wrong Python.
+    Fix: press Ctrl+Shift+P, type **Python: Select Interpreter**, and choose the one inside `cqrs_ledger\.venv`
+    (on a PC without `.venv`, choose Python 3.12). The program itself is not affected; only the editor was confused.
+  * **red**: an error found by the editor. There should be none.
+* To run a command, open the terminal (Ctrl+`), go to the code folder with `cd cqrs_ledger`, then type for example
+  `.venv\Scripts\python.exe manage.py verify_ledger`.

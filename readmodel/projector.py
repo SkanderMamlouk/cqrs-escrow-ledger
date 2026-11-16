@@ -22,6 +22,7 @@ from readmodel.models import (
     ProjectionCheckpoint,
     WebhookOutbox,
 )
+from readmodel.webhooks import deliver_pending
 
 log = logging.getLogger("ledger.projector")
 
@@ -66,8 +67,6 @@ class LedgerProjector:
                 return total
 
     def run_forever(self, poll_seconds: float | None = None) -> None:
-        from readmodel.webhooks import deliver_pending
-
         poll = poll_seconds if poll_seconds is not None else settings.PROJECTOR_POLL_SECONDS
         log.info("Projector started (poll every %ss). Press Ctrl+C to stop.", poll)
         while True:

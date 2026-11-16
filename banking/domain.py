@@ -7,6 +7,7 @@ from eventsourcing.domain import Aggregate, event
 
 from banking import clock, identity
 from banking.exceptions import InsufficientFunds, InvalidAmount, UnknownFee, UnknownHold
+from banking.money import fmt
 
 
 def new_ref(prefix: str) -> str:
@@ -227,8 +228,6 @@ def signed_amount(domain_event: object) -> int:
 
 
 def describe(domain_event: object) -> str:
-    from banking.money import fmt
-
     name = event_type_name(domain_event)
     e: Any = domain_event
     if name == "AccountOpened":

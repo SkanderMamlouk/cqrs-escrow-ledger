@@ -12,8 +12,8 @@ dashboards, and it fires **signed webhooks**. An **AI audit assistant** summariz
 account, citing exact event IDs and timestamps. A **deterministic verifier** rejects any
 claim it cannot prove.
 
-> New to programming? Read [docs/GUIDE_FOR_BEGINNERS.md](docs/GUIDE_FOR_BEGINNERS.md) first.
-> It explains every concept and every folder in plain language.
+> New to programming? Read [docs/GUIDE_FOR_BEGINNERS.md](docs/GUIDE_FOR_BEGINNERS.md) first (the ideas, in plain language),
+> then [docs/CODE_GUIDE.md](docs/CODE_GUIDE.md) (every file and function of the code, explained for someone who never used Django).
 
 ---
 
@@ -128,6 +128,7 @@ Every attempt is stored in `AuditRun` and shown on the page.
 | `python manage.py rebuild_projections` | **wipe and rebuild** the read model from the events |
 | `python manage.py verify_ledger [--catch-up] [--json f]` | deterministic consistency gate (exit code 1 when it fails) |
 | `python manage.py benchmark [--lag] [--quick]` | real performance measurements + PNG charts |
+| `python manage.py benchmark --charts-only` | redraw the PNG charts from the saved JSON (no new measurement) |
 | `python manage.py reset_all --yes` | delete everything (demo reset) |
 | `python -m pytest -v` | 59 unit and integration tests |
 | `python scripts/take_screenshots.py` | re-take the 17 screenshots (app running, after `RESET_DEMO.bat`; needs `pip install playwright`) |
@@ -141,7 +142,7 @@ web/            Django views + templates (HTMX, Chart.js stored locally: works o
 config/         settings, DB-mode resolver (postgres / embedded / sqlite), URLs
 tests/          pytest suite (domain, application, projector, AI verifier, web, architecture rule)
 benchmarks/     measured results (JSON + PNG)
-docs/           beginner guide, architecture diagrams (Mermaid), demo video script, Q&A preparation
+docs/           beginner guide, code guide (file by file), architecture diagrams (Mermaid), demo video script, Q&A preparation
 scripts/        Windows setup / start scripts used by the .bat files
 .github/        CI pipeline (tests + seed + rebuild + verification gate on PostgreSQL and SQLite)
 ```

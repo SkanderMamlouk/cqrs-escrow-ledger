@@ -1,3 +1,5 @@
+import json
+
 from django import template
 
 from banking.money import fmt
@@ -15,8 +17,6 @@ def tnd(millimes):
 
 @register.filter
 def tojson(value):
-    import json
-
     def default(o):
         return o.isoformat() if hasattr(o, "isoformat") else str(o)
 

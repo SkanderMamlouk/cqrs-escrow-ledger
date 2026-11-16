@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from django.db.models import Sum
+from eventsourcing.application import project_aggregate
 
 from banking.domain import event_type_name
 from readmodel.models import AccountSummary, LedgerEntry
@@ -62,8 +63,6 @@ def verify(app: Any) -> VerificationReport:
         snap_ok = True
         for v in app.snapshot_versions(account_id):
             replay_v = app.repository.get(account_id, version=v)
-            from eventsourcing.application import project_aggregate
-
             pure_v = project_aggregate(None, app.events.get(account_id, lte=v))
             snap_ok &= _state(replay_v) == _state(pure_v)
         report.add(f"[{short}] {len(app.snapshot_versions(account_id))} snapshot(s) match replay", snap_ok)

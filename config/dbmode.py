@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import importlib.util
 import os
+import warnings
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -56,15 +58,10 @@ def resolve(base_dir: Path) -> tuple[str, dict[str, str], dict]:
     mode = os.environ.get("DB_MODE", "embedded").strip().lower()
     var_dir = Path(os.environ.get("VAR_DIR", base_dir / "var"))
 
-    if mode == "embedded":
-        try:
-            import pgserver
-        except ImportError:
-            import warnings
-
-            warnings.warn("DB_MODE=embedded needs the 'pgserver' package (Python 3.11 or 3.12). "
-                          "Falling back to DB_MODE=sqlite.", RuntimeWarning, stacklevel=2)
-            mode = "sqlite"
+    if mode == "embedded" and importlib.util.find_spec("pgserver") is None:
+        warnings.warn("DB_MODE=embedded needs the 'pgserver' package (Python 3.11 or 3.12). "
+                      "Falling back to DB_MODE=sqlite.", RuntimeWarning, stacklevel=2)
+        mode = "sqlite"
 
     if mode == "sqlite":
         var_dir.mkdir(parents=True, exist_ok=True)

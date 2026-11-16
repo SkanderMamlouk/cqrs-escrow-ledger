@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
+from django.conf import settings
+
 from banking.domain import BankAccount, describe, event_ref, event_type_name, signed_amount
 from banking.money import plain, to_millimes
 
@@ -102,8 +104,6 @@ def build_evidence(app: Any, account_id: UUID, start: datetime | None = None, en
     if account is None:
         raise ValueError("Account has no events.")
     closing = window[-1] if window else None
-    from django.conf import settings
-
     facts = {
         "opening_balance_tnd": plain(opening),
         "closing_balance_tnd": closing["balance_after_tnd"] if closing else plain(opening),

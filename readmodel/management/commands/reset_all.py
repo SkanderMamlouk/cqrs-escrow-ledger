@@ -24,12 +24,11 @@ class Command(BaseCommand):
         connections.close_all()
 
         if settings.DB_MODE == "sqlite":
-            for key in ("SQLITE_DBNAME",):
-                path = Path(settings.EVENTSTORE_ENV[key])
-                for suffix in ("", "-wal", "-shm"):
-                    p = Path(str(path) + suffix)
-                    if p.exists():
-                        p.unlink()
+            events = settings.EVENTSTORE_ENV["SQLITE_DBNAME"]
+            for suffix in ("", "-wal", "-shm"):
+                p = Path(events + suffix)
+                if p.exists():
+                    p.unlink()
             read = Path(settings.DATABASES["default"]["NAME"])
             if read.exists():
                 read.unlink()

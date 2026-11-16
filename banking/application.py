@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import threading
-import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Callable, Iterable
@@ -12,7 +11,7 @@ from eventsourcing.persistence import IntegrityError, StoredEvent
 
 from banking import clock
 from banking.domain import BankAccount, describe, event_ref, event_type_name, new_ref, signed_amount
-from banking.exceptions import AccountNotFound, ConcurrencyConflict, InvalidAmount
+from banking.exceptions import AccountNotFound, ConcurrencyConflict, InvalidAmount, UnknownHold
 
 
 @dataclass
@@ -54,12 +53,6 @@ class BankingApplication(Application[UUID]):
         self.snapshot_interval = interval
         self.snapshotting_intervals = {BankAccount: interval}
 
-    def _load(self, account_id: UUID) -> BankAccount:
-        try:
-            return self.repository.get(account_id)
-        except AggregateNotFoundError as exc:
-            raise AccountNotFound(f"Account {account_id} does not exist.") from exc
-
     def _recorded(self, recordings: Iterable[Any]) -> list[RecordedEvent]:
         out = []
         for rec in recordings:
@@ -85,7 +78,7 @@ class BankingApplication(Application[UUID]):
         max_attempts: int = 3,
     ) -> tuple[list[RecordedEvent], Any]:
         for _attempt in range(max_attempts):
-            accounts = [self._load(aid) for aid in account_ids]
+            accounts = [self.get_account(aid) for aid in account_ids]
             first = accounts[0]
             if expected_version is not None and first.version != expected_version:
                 raise ConcurrencyConflict(first.id, expected_version, first.version)
@@ -94,7 +87,7 @@ class BankingApplication(Application[UUID]):
                 recordings = self.save(*accounts)
             except IntegrityError:
                 if expected_version is not None:
-                    latest = self._load(first.id)
+                    latest = self.get_account(first.id)
                     if latest.version != expected_version:
                         raise ConcurrencyConflict(first.id, expected_version, latest.version) from None
                 continue
@@ -126,7 +119,7 @@ class BankingApplication(Application[UUID]):
             beneficiary_uuid = UUID(str(beneficiary_id))
         except ValueError:
             raise InvalidAmount("An escrow hold needs a valid beneficiary account.") from None
-        self._load(beneficiary_uuid)
+        self.get_account(beneficiary_uuid)
         if beneficiary_uuid == account_id:
             raise InvalidAmount("An escrow hold cannot designate the same account as beneficiary.")
         beneficiary = str(beneficiary_uuid)
@@ -142,11 +135,9 @@ class BankingApplication(Application[UUID]):
 
     def settle_escrow(self, account_id: UUID, hold_id: str, reference: str = "",
                       expected_version: int | None = None) -> CommandResult:
-        account = self._load(account_id)
+        account = self.get_account(account_id)
         hold = account.holds.get(hold_id)
         if hold is None:
-            from banking.exceptions import UnknownHold
-
             raise UnknownHold(f"No active hold {hold_id} on this account.")
         beneficiary = UUID(hold["beneficiary_id"])
         transfer_id = new_ref("TRF")
@@ -266,7 +257,7 @@ class BankingApplication(Application[UUID]):
         results: dict[str, str] = {}
 
         def clerk(name: str) -> None:
-            account = self._load(account_id)
+            account = self.get_account(account_id)
             loaded = account.version
             account.deposit(amount, reference=f"Race test by {name}", channel="BRANCH")
             barrier.wait()
@@ -284,7 +275,7 @@ class BankingApplication(Application[UUID]):
         return results
 
     def import_legacy_v1_deposit(self, account_id: UUID, amount: int, reference: str) -> CommandResult:
-        account = self._load(account_id)
+        account = self.get_account(account_id)
         state = self.mapper.transcoder.encode(
             {"timestamp": clock.now(), "amount": amount, "reference": reference}
         )
@@ -297,7 +288,4 @@ class BankingApplication(Application[UUID]):
                             e.originator_version, e.timestamp, None, describe(e))
         return CommandResult("Legacy v1 event imported.", [rec], account_id)
 
-
-def new_account_id() -> UUID:
-    return uuid.uuid4()
 

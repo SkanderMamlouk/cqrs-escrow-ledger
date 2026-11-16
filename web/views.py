@@ -240,9 +240,9 @@ def balance_at_api(request: HttpRequest, account_id: UUID) -> JsonResponse:
 
 def event_store(request: HttpRequest) -> HttpResponse:
     app = get_app()
-    head = app.recorder.max_notification_id() or 0
+    last_position = app.recorder.max_notification_id() or 0
     per_page = 25
-    log = list(reversed(app.recorder.select_notifications(start=1, limit=max(head, 1)))) if head else []
+    log = list(reversed(app.recorder.select_notifications(start=1, limit=last_position))) if last_position else []
     pages = max(1, (len(log) + per_page - 1) // per_page)
     page = min(max(1, _int(request.GET.get("page"), 1)), pages)
     rows = []
@@ -253,11 +253,10 @@ def event_store(request: HttpRequest) -> HttpResponse:
                      "event_id": event_ref(n.originator_id, n.originator_version),
                      "topic": topic, "raw": raw,
                      "legacy": topic.endswith("FundsDeposited") and '"channel"' not in raw})
-    head = len(log)
     names = dict(AccountSummary.objects.values_list("account_id", "owner_name"))
     for r in rows:
         r["owner"] = names.get(UUID(r["stream"]), "")
-    return render(request, "web/events.html", {"rows": rows, "head": head, "page": page, "pages": pages,
+    return render(request, "web/events.html", {"rows": rows, "total": len(log), "page": page, "pages": pages,
                                                "module": settings.EVENTSTORE_ENV["PERSISTENCE_MODULE"]})
 
 

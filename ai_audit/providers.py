@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 
 import httpx
@@ -92,7 +91,4 @@ def describe_provider() -> dict:
     _, info = select_provider()
     return {"name": info.name, "model": info.model, "reason": info.reason}
 
-
-def to_json(obj) -> str:
-    return json.dumps(obj, indent=1, ensure_ascii=False)
 
