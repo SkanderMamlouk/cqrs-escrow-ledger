@@ -4,8 +4,6 @@ DANGER (demo only): deletes the event store AND the read database, then
 recreates empty tables.  Use it to restart the demo from zero.
 """
 
-import os
-import shutil
 from pathlib import Path
 
 from django.conf import settings

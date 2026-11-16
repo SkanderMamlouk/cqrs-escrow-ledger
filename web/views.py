@@ -25,8 +25,7 @@ from uuid import UUID
 
 from django.conf import settings
 from django.contrib import messages
-from django.core.paginator import Paginator
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Sum
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -378,10 +377,3 @@ def health(request: HttpRequest) -> JsonResponse:
     status = projection_status(get_app())
     return JsonResponse({"status": "ok", "db_mode": settings.DB_MODE, **{k: v for k, v in status.items()
                                                                           if k != "updated_at"}})
-
-
-def search(request: HttpRequest) -> HttpResponse:
-    q = request.GET.get("q", "").strip()
-    rows = LedgerEntry.objects.filter(Q(event_id__icontains=q) | Q(business_ref__icontains=q) |
-                                      Q(description__icontains=q) | Q(owner_name__icontains=q))[:50] if q else []
-    return render(request, "web/search.html", {"q": q, "rows": rows})

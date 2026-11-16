@@ -1,8 +1,0 @@
-{% extends "web/base.html" %}{% load ledger_extras %}
-{% block content %}
-<h1>Search "{{ q }}"</h1>
-<div class="card flush mt"><table><tbody>{% for e in rows %}
-<tr><td class="mono"><a href="{% url 'replay' e.account_id %}?step={{ e.version }}">{{ e.event_id }}</a></td><td>{{ e.owner_name }}</td>
-<td><span class="tag {{ e.event_type }}">{{ e.event_type }}</span></td><td>{{ e.description }}</td><td class="num">{{ e.amount|tnd }}</td></tr>
-{% empty %}<tr><td class="muted">No result.</td></tr>{% endfor %}</tbody></table></div>
-{% endblock %}

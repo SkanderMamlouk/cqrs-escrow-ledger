@@ -8,7 +8,6 @@ urlpatterns = [
     path("fragments/recent/", views.recent_events, name="recent_events"),
     path("accounts/<uuid:account_id>/", views.account_detail, name="account"),
     path("alerts/", views.alerts, name="alerts"),
-    path("search/", views.search, name="search"),
     # Command side (write model)
     path("accounts/open/", views.open_account, name="open_account"),
     path("accounts/<uuid:account_id>/command/<str:name>/", views.account_command, name="account_command"),
