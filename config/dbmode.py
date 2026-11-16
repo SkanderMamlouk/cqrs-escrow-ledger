@@ -26,6 +26,16 @@ def _ensure_databases_exist(host: str, port: str, user: str, password: str) -> N
 
 def _start_embedded_postgres(var_dir: Path) -> tuple[str, str, str, str]:
     import pgserver
+    import pgserver.postgres_server
+    import tempfile
+
+    _orig_ensure = pgserver.postgres_server.PostgresServer.ensure_postgres_running
+
+    def _safe_ensure(self):
+        self.log = Path(tempfile.gettempdir()) / f"pgserver_{self.pgdata.name}.log"
+        return _orig_ensure(self)
+
+    pgserver.postgres_server.PostgresServer.ensure_postgres_running = _safe_ensure
 
     tz_dir = Path(pgserver.__file__).parent / "pginstall" / "share" / "postgresql" / "timezone"
     if not (tz_dir / "Africa" / "Tunis").exists():
@@ -47,7 +57,19 @@ def _start_embedded_postgres(var_dir: Path) -> tuple[str, str, str, str]:
                     pass
 
     var_dir.mkdir(parents=True, exist_ok=True)
-    server = pgserver.get_server(var_dir / "pgdata", cleanup_mode="stop")
+    pgdata = var_dir / "pgdata"
+    pid_file = pgdata / "postmaster.pid"
+    if pid_file.exists():
+        try:
+            import psutil
+            pid = int(pid_file.read_text().splitlines()[0])
+            if not psutil.pid_exists(pid):
+                pid_file.unlink(missing_ok=True)
+                (pgdata / "postmaster.opts").unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    server = pgserver.get_server(pgdata, cleanup_mode="stop")
     uri = urlparse(server.get_uri())
     host, port = uri.hostname or "127.0.0.1", str(uri.port or 5432)
     user, password = uri.username or "postgres", "embedded"
