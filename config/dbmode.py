@@ -32,10 +32,17 @@ def _start_embedded_postgres(var_dir: Path) -> tuple[str, str, str, str]:
     _orig_ensure = pgserver.postgres_server.PostgresServer.ensure_postgres_running
 
     def _safe_ensure(self):
-        self.log = Path(tempfile.gettempdir()) / f"pgserver_{self.pgdata.name}.log"
+        self.log = Path(tempfile.gettempdir()) / f"pgserver_{self.pgdata.name}_{os.getpid()}.log"
         return _orig_ensure(self)
 
     pgserver.postgres_server.PostgresServer.ensure_postgres_running = _safe_ensure
+
+    _orig_pg_ctl = pgserver.postgres_server.pg_ctl
+
+    def _safe_pg_ctl(args, pgdata=None, user=None, timeout=60):
+        return _orig_pg_ctl(args, pgdata=pgdata, user=user, timeout=max(timeout or 60, 60))
+
+    pgserver.postgres_server.pg_ctl = _safe_pg_ctl
 
     tz_dir = Path(pgserver.__file__).parent / "pginstall" / "share" / "postgresql" / "timezone"
     if not (tz_dir / "Africa" / "Tunis").exists():
@@ -66,6 +73,17 @@ def _start_embedded_postgres(var_dir: Path) -> tuple[str, str, str, str]:
             if not psutil.pid_exists(pid):
                 pid_file.unlink(missing_ok=True)
                 (pgdata / "postmaster.opts").unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    handle_file = pgdata / ".handle_pids.json"
+    if handle_file.exists():
+        try:
+            import json
+            import psutil
+            pids = json.loads(handle_file.read_text())
+            if not any(psutil.pid_exists(p) for p in pids):
+                handle_file.unlink(missing_ok=True)
         except Exception:
             pass
 
