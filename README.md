@@ -12,9 +12,6 @@ dashboards, and it fires **signed webhooks**. An **AI audit assistant** summariz
 account, citing exact event IDs and timestamps. A **deterministic verifier** rejects any
 claim it cannot prove.
 
-> New to programming? Read [docs/GUIDE_FOR_BEGINNERS.md](docs/GUIDE_FOR_BEGINNERS.md) first (the ideas, in plain language),
-> then [docs/CODE_GUIDE.md](docs/CODE_GUIDE.md) (every file and function of the code, explained for someone who never used Django).
-
 ---
 
 ## Official references from the course sheet
